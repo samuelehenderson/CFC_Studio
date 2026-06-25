@@ -71,6 +71,30 @@ holds a simulated room at its 72 °F setpoint by modulating a heating valve,
 with a small first-order "plant" model (`MUL_R` → `ADD_R` → `PT1_P`) feeding the
 room temperature back to the controller. Press **Run** to watch it settle.
 
+## Deploy to Vercel
+
+CFC Studio is a static Vite build, which Vercel auto-detects (a `vercel.json`
+pins the settings explicitly). To put it online:
+
+1. Go to **[vercel.com/new](https://vercel.com/new)** and **Import** the
+   `cfc_studio` GitHub repository (authorize Vercel for the repo if prompted).
+2. Vercel detects the framework as **Vite** — Build Command `npm run build`,
+   Output Directory `dist`. Leave the defaults and click **Deploy**.
+3. In **Settings → Git**, set the **Production Branch** to the branch you want
+   live (e.g. `main`, or `claude/wonderful-mendel-eqqvrb`). Every push to that
+   branch redeploys; other branches get preview URLs.
+
+Or from your own machine with the Vercel CLI:
+
+```bash
+npm i -g vercel
+vercel        # first run links the project and creates a preview
+vercel --prod # promote to your production domain
+```
+
+There's no backend, environment variable, or database to configure — it's a
+pure client-side app.
+
 ## How the simulation works
 
 Each cycle the solver:
