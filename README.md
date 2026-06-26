@@ -23,7 +23,7 @@ building controls"):
 | **Editor** | Build & simulate charts — the working home base |
 | **Plant** | Live animated AHU the chart actually controls, closed-loop — **live now** |
 | **Scope** | Oscilloscope / data recorder for pin values over time — **live now** |
-| **Translate** | PPCL → CFC migration bench *(roadmap)* |
+| **Translate** | PPCL → CFC migration bench (paste PPCL, see CFC mapping) — **live now** |
 | **Reference** | Auto-generated block datasheets with provenance badges — **live now** |
 
 Try it: open the **Plant** tab → **Load AHU demo chart** → **Run simulation** (bump

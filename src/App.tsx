@@ -5,7 +5,7 @@ import { ReferenceView } from './components/ReferenceView';
 import { ScopeView } from './components/ScopeView';
 import { PlantView } from './components/PlantView';
 import { LearnView } from './components/LearnView';
-import { PlaceholderTab } from './components/PlaceholderTab';
+import { TranslateView } from './components/TranslateView';
 import { useChartStore } from './store/chartStore';
 
 export function App() {
@@ -29,7 +29,7 @@ export function App() {
         {activeTab === 'scope' && <ScopeView />}
         {activeTab === 'plant' && <PlantView />}
         {activeTab === 'learn' && <LearnView />}
-        {activeTab === 'translate' && <PlaceholderTab tab="translate" />}
+        {activeTab === 'translate' && <TranslateView />}
       </main>
     </div>
   );
