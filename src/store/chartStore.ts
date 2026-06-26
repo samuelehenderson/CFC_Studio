@@ -39,10 +39,46 @@ export interface LiveValues {
 let nodeCounter = 0;
 const nextId = (type: string) => `${type}_${++nodeCounter}`;
 
+export type TabId = 'learn' | 'editor' | 'plant' | 'scope' | 'translate' | 'reference';
+export type Theme = 'dark' | 'light';
+
+const THEME_KEY = 'cfc.theme';
+const TAB_KEY = 'cfc.tab';
+
+/** Read persisted/system theme and apply it to <html>. Called once at boot. */
+export function initTheme(): Theme {
+  let theme: Theme = 'dark';
+  try {
+    const saved = localStorage.getItem(THEME_KEY) as Theme | null;
+    if (saved === 'dark' || saved === 'light') theme = saved;
+    else if (window.matchMedia?.('(prefers-color-scheme: light)').matches) theme = 'light';
+  } catch {
+    /* ignore */
+  }
+  document.documentElement.setAttribute('data-theme', theme);
+  return theme;
+}
+
+function readTab(): TabId {
+  try {
+    const t = localStorage.getItem(TAB_KEY) as TabId | null;
+    if (t) return t;
+  } catch {
+    /* ignore */
+  }
+  return 'editor';
+}
+
 interface ChartState {
   nodes: CfcNode[];
   edges: Edge[];
   selectedId: string | null;
+
+  // shell
+  activeTab: TabId;
+  theme: Theme;
+  setTab: (t: TabId) => void;
+  toggleTheme: () => void;
 
   // simulation
   running: boolean;
@@ -109,6 +145,27 @@ export const useChartStore = create<ChartState>((set, get) => ({
   nodes: [],
   edges: [],
   selectedId: null,
+
+  activeTab: readTab(),
+  theme: (document.documentElement.getAttribute('data-theme') as Theme) || 'dark',
+  setTab: (t) => {
+    set({ activeTab: t });
+    try {
+      localStorage.setItem(TAB_KEY, t);
+    } catch {
+      /* ignore */
+    }
+  },
+  toggleTheme: () => {
+    const theme: Theme = get().theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', theme);
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+    } catch {
+      /* ignore */
+    }
+    set({ theme });
+  },
 
   running: false,
   sim: null,

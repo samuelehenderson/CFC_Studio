@@ -1,5 +1,6 @@
 import { blocksByCategory } from '../engine/blocks';
 import { useChartStore } from '../store/chartStore';
+import { ProvDot } from './ProvBadge';
 
 /**
  * Block palette. Blocks can be dragged onto the canvas, or clicked to drop
@@ -34,6 +35,7 @@ export function Palette() {
               <span className="swatch" style={{ background: b.color ?? '#475569' }} />
               <span>{b.name}</span>
               <span className="pal-type">{b.type}</span>
+              <ProvDot provenance={b.provenance ?? 'inferred'} />
             </div>
           ))}
         </div>

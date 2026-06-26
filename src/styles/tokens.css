@@ -1,0 +1,117 @@
+/**
+ * Design tokens — two-tier system.
+ *
+ * Tier 1 (primitives): raw ramps, not used directly by components.
+ * Tier 2 (semantic): what components reference (--bg-app, --text, --accent…).
+ * Themes swap the semantic layer via html[data-theme="light|dark"].
+ *
+ * Keep component CSS referencing ONLY semantic tokens so light/dark + future
+ * themes stay a single source of truth.
+ */
+
+:root {
+  /* ---- primitives ---- */
+  --c-slate-50: #f8fafc;
+  --c-slate-100: #f1f5f9;
+  --c-slate-200: #e2e8f0;
+  --c-slate-300: #cbd5e1;
+  --c-slate-400: #94a3b8;
+  --c-slate-500: #64748b;
+  --c-slate-600: #475569;
+  --c-slate-700: #334155;
+  --c-slate-800: #1e293b;
+  --c-slate-900: #0f172a;
+  --c-slate-950: #020617;
+
+  --c-sky-400: #38bdf8;
+  --c-sky-500: #0ea5e9;
+  --c-sky-600: #0284c7;
+  --c-emerald-500: #22c55e;
+  --c-emerald-600: #16a34a;
+  --c-amber-500: #f59e0b;
+  --c-red-500: #ef4444;
+  --c-red-600: #dc2626;
+
+  /* ---- non-color primitives (shared across themes) ---- */
+  --radius-sm: 4px;
+  --radius: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* ---- category accents (block headers) — theme-independent, saturated ---- */
+  --cat-io: #16a34a;
+  --cat-constants: #64748b;
+  --cat-signal: #9333ea;
+  --cat-math: #2563eb;
+  --cat-logic: #7c3aed;
+  --cat-compare: #0891b2;
+  --cat-selectors: #ca8a04;
+  --cat-timers: #dc2626;
+  --cat-counters: #db2777;
+  --cat-memory: #0d9488;
+  --cat-control: #ea580c;
+
+  /* provenance badge colors */
+  --prov-confirmed: #16a34a;
+  --prov-inferred: #d97706;
+  --prov-gap: #64748b;
+}
+
+/* ---------- DARK ---------- */
+html[data-theme='dark'] {
+  --bg-app: var(--c-slate-950);
+  --bg: var(--c-slate-900);
+  --panel: var(--c-slate-800);
+  --panel-2: #273449;
+  --border: var(--c-slate-700);
+  --border-strong: var(--c-slate-600);
+  --text: var(--c-slate-200);
+  --text-dim: var(--c-slate-400);
+  --accent: var(--c-sky-400);
+  --accent-contrast: #06283d;
+  --good: var(--c-emerald-500);
+  --bad: var(--c-red-500);
+  --warn: var(--c-amber-500);
+  --signal-analog: var(--c-sky-400);
+  --signal-binary: var(--c-emerald-500);
+  --focus: var(--c-sky-400);
+  --grid-dot: #1e293b;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.5);
+  --canvas-bg: var(--c-slate-950);
+  color-scheme: dark;
+}
+
+/* ---------- LIGHT ---------- */
+html[data-theme='light'] {
+  --bg-app: var(--c-slate-100);
+  --bg: var(--c-slate-50);
+  --panel: #ffffff;
+  --panel-2: var(--c-slate-100);
+  --border: var(--c-slate-200);
+  --border-strong: var(--c-slate-300);
+  --text: var(--c-slate-800);
+  --text-dim: var(--c-slate-500);
+  --accent: var(--c-sky-600);
+  --accent-contrast: #ffffff;
+  --good: var(--c-emerald-600);
+  --bad: var(--c-red-600);
+  --warn: #b45309;
+  --signal-analog: var(--c-sky-600);
+  --signal-binary: var(--c-emerald-600);
+  --focus: var(--c-sky-500);
+  --grid-dot: #e2e8f0;
+  --shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+  --shadow-lg: 0 10px 30px rgba(15, 23, 42, 0.15);
+  --canvas-bg: #f8fafc;
+  color-scheme: light;
+}

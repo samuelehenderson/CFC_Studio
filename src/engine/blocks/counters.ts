@@ -100,6 +100,7 @@ export const counterBlocks: BlockDefinition[] = [
       else {
         if (upEdge) cv += 1;
         if (dnEdge) cv -= 1;
+        if (cv < 0) cv = 0; // counter holds at zero rather than going negative
       }
       state.cv = cv;
       state.prevCu = cu;

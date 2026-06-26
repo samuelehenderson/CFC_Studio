@@ -1,9 +1,11 @@
 /**
  * Closed-loop control blocks (Desigo building-automation names).
  *
- *   LOOP   — universal PID controller (the PPCL LOOP successor). Setpoint W,
- *            process value X, output Y; tuning Kp / Tn / Tv; direct or reverse
- *            acting; external tracking. Equivalent to SIMATIC CONT_C.
+ *   LOOP   — building-automation universal PID (the PPCL LOOP successor).
+ *            Setpoint W, process value X, output Y; tuning Kp / Tn / Tv;
+ *            direct/reverse acting; external tracking. [INFERRED pin names]
+ *   CONT_C — SIMATIC continuous PID (SFB 41) with its documented pin table.
+ *            A DISTINCT block from LOOP — different pins, not interchangeable.
  *   INT_P  — integrator (with hold/reset)
  *   DIF_P  — differentiator (rate of change)
  *   PT1_P  — first-order lag / exponential filter
@@ -25,10 +27,12 @@ const C = '#ea580c';
 export const controlBlocks: BlockDefinition[] = [
   {
     type: 'LOOP',
-    name: 'PID Loop',
+    name: 'PID Loop (BA)',
     category: 'Control',
+    provenance: 'inferred',
+    sourceDoc: 'Desigo PX/PXC LOOP (ABT); pin names inferred — see docs/CFC-reference.md §2.9e',
     description:
-      'Universal PID controller (P/PI/PD/PID). Y = Kp·[e + (1/Tn)∫e dt + Tv·de/dt]. Reverse acting (heating): e = W − X. Output clamped to [Ymin, Ymax] with integral anti-windup; TRK forces Y to the tracking value (bumpless).',
+      'Building-automation universal PID (P/PI/PD/PID). Y = Kp·[e + (1/Tn)∫e dt + Tv·de/dt]. Reverse acting (heating): e = W − X. Output clamped to [Ymin, Ymax] with integral anti-windup; TRK forces Y to the tracking value (bumpless). Distinct from SIMATIC CONT_C.',
     color: C,
     stateful: true,
     inputs: [
@@ -97,6 +101,118 @@ export const controlBlocks: BlockDefinition[] = [
       state.integral = integral;
       state.prevX = x;
       return { y, e };
+    },
+  },
+  {
+    type: 'CONT_C',
+    name: 'CONT_C (SIMATIC PID)',
+    category: 'Control',
+    provenance: 'confirmed',
+    sourceDoc: 'SIMATIC Standard PID Control, Stdpid_e.pdf — SFB 41 CONT_C',
+    description:
+      'SIMATIC continuous PID controller (SFB 41). e = SP_INT − PV_IN (with DEADB_W deadband). Parallel P/I/D with GAIN, TI, TD and derivative lag TM_LAG. Output LMN = LIMIT(P+I+D, LMN_LLM..LMN_HLM)·LMN_FAC + LMN_OFF, with anti-windup. MAN_ON tracks MAN (bumpless). Reverse action: negative GAIN.',
+    color: C,
+    stateful: true,
+    inputs: [
+      { id: 'sp_int', name: 'SP_INT', type: 'REAL', default: 0, description: 'Internal setpoint' },
+      { id: 'pv_in', name: 'PV_IN', type: 'REAL', default: 0, description: 'Process value' },
+      { id: 'man', name: 'MAN', type: 'REAL', default: 0, description: 'Manual manipulated value' },
+      { id: 'man_on', name: 'MAN_ON', type: 'BOOL', default: false, description: 'Manual mode on' },
+    ],
+    params: [
+      { id: 'gain', name: 'GAIN (Kp)', type: 'REAL', default: 2 },
+      { id: 'ti', name: 'TI integral (s)', type: 'REAL', default: 60, min: 0 },
+      { id: 'td', name: 'TD derivative (s)', type: 'REAL', default: 10, min: 0 },
+      { id: 'tm_lag', name: 'TM_LAG D-lag (s)', type: 'REAL', default: 2, min: 0 },
+      { id: 'deadb_w', name: 'DEADB_W deadband', type: 'REAL', default: 0, min: 0 },
+      { id: 'lmn_hlm', name: 'LMN_HLM (high)', type: 'REAL', default: 100 },
+      { id: 'lmn_llm', name: 'LMN_LLM (low)', type: 'REAL', default: 0 },
+      { id: 'lmn_fac', name: 'LMN_FAC scale', type: 'REAL', default: 1 },
+      { id: 'lmn_off', name: 'LMN_OFF offset', type: 'REAL', default: 0 },
+    ],
+    outputs: [
+      { id: 'lmn', name: 'LMN', type: 'REAL' },
+      { id: 'qlmn_hlm', name: 'QLMN_HLM', type: 'BOOL' },
+      { id: 'qlmn_llm', name: 'QLMN_LLM', type: 'BOOL' },
+      { id: 'lmn_p', name: 'LMN_P', type: 'REAL' },
+      { id: 'lmn_i', name: 'LMN_I', type: 'REAL' },
+      { id: 'lmn_d', name: 'LMN_D', type: 'REAL' },
+    ],
+    initState: () => ({ integral: 0, prevPv: 0, dFilt: 0, init: false }),
+    evaluate: ({ inputs, params, state, dt }) => {
+      const sp = num(inputs.sp_int);
+      const pv = num(inputs.pv_in);
+      const gain = num(params.gain);
+      const ti = num(params.ti);
+      const td = num(params.td);
+      const tmLag = Math.max(0, num(params.tm_lag));
+      const db = Math.abs(num(params.deadb_w));
+      const hlm = num(params.lmn_hlm);
+      const llm = num(params.lmn_llm);
+      const fac = num(params.lmn_fac);
+      const off = num(params.lmn_off);
+
+      // Error with symmetric deadband around zero.
+      let e = sp - pv;
+      if (Math.abs(e) <= db) e = 0;
+      else e -= Math.sign(e) * db;
+
+      if (!state.init) {
+        state.prevPv = pv;
+        state.init = true;
+      }
+
+      const p = gain * e;
+
+      // Manual: hold LMN at MAN, back-calculate integral for bumpless return.
+      if (bool(inputs.man_on)) {
+        const limited = Math.max(llm, Math.min(hlm, num(inputs.man)));
+        state.integral = limited - p;
+        state.prevPv = pv;
+        return {
+          lmn: limited * fac + off,
+          qlmn_hlm: num(inputs.man) >= hlm,
+          qlmn_llm: num(inputs.man) <= llm,
+          lmn_p: p,
+          lmn_i: state.integral as number,
+          lmn_d: 0,
+        };
+      }
+
+      let integral = state.integral as number;
+      const prevIntegral = integral;
+      if (ti > 0) integral += (gain / ti) * e * dt;
+
+      // Derivative on measurement, first-order lag filtered by TM_LAG.
+      const dPv = (pv - (state.prevPv as number)) / (dt || 1);
+      const dRaw = -gain * td * dPv;
+      let dFilt = state.dFilt as number;
+      dFilt += (dRaw - dFilt) * (dt / (tmLag + dt));
+
+      let sum = p + integral + dFilt;
+      let qh = false;
+      let ql = false;
+      if (sum > hlm) {
+        sum = hlm;
+        qh = true;
+        if (ti > 0) integral = prevIntegral; // anti-windup
+      } else if (sum < llm) {
+        sum = llm;
+        ql = true;
+        if (ti > 0) integral = prevIntegral;
+      }
+
+      state.integral = integral;
+      state.dFilt = dFilt;
+      state.prevPv = pv;
+      return {
+        lmn: sum * fac + off,
+        qlmn_hlm: qh,
+        qlmn_llm: ql,
+        lmn_p: p,
+        lmn_i: integral,
+        lmn_d: dFilt,
+      };
     },
   },
   {

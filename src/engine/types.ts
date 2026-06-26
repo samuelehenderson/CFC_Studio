@@ -72,6 +72,14 @@ export interface EvalContext {
   prev: Record<string, Value>;
 }
 
+/**
+ * How well a block's behaviour is verified against Siemens documentation:
+ *   confirmed — pin/semantics seen in Siemens/IEC docs
+ *   inferred  — modelled from the documented equivalent; exact Desigo spec not public
+ *   gap       — simulator convenience or unknown spec; NOT a real Siemens block
+ */
+export type Provenance = 'confirmed' | 'inferred' | 'gap';
+
 /** Static definition of a block type (one per block kind, shared by instances). */
 export interface BlockDefinition {
   /** Unique type key, e.g. 'ADD', 'PID', 'TON'. */
@@ -87,6 +95,10 @@ export interface BlockDefinition {
   params?: ParamDef[];
   /** Optional fixed accent colour for the node header. */
   color?: string;
+  /** Fidelity of this block vs Siemens docs (defaults applied in the registry). */
+  provenance?: Provenance;
+  /** Short citation/source for the block's behaviour. */
+  sourceDoc?: string;
   /**
    * Whether this block "breaks" feedback for ordering purposes — i.e. it is
    * a state element (timer, flip-flop, integrator) that legitimately reads

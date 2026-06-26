@@ -12,6 +12,31 @@ want a sandbox to prototype and understand block behaviour without a controller.
 
 ![CFC Studio — heating loop](docs/screenshot.png)
 
+## A multi-tab training studio
+
+CFC Studio is organised as a tabbed studio (a "flight simulator for Siemens
+building controls"):
+
+| Tab | What it does |
+|---|---|
+| **Learn** | Guided, auto-checked curriculum that drives the real editor *(roadmap)* |
+| **Editor** | Build & simulate charts — the working home base |
+| **Plant** | Live animated equipment (AHU/VAV/boiler/chiller) the chart controls *(roadmap)* |
+| **Scope** | Trends & data recorder for pin values over time *(roadmap)* |
+| **Translate** | PPCL → CFC migration bench *(roadmap)* |
+| **Reference** | Auto-generated block datasheets with provenance badges — **live now** |
+
+Light & dark themes, persisted across sessions.
+
+### Honesty layer (provenance)
+
+Every block is stamped **Confirmed** (verified against Siemens/IEC docs),
+**Inferred** (modelled from the documented equivalent — exact Desigo spec not
+public), or **Non-Siemens** (a simulator convenience). The badge shows in the
+palette, the inspector, and the Reference datasheets, so the tool teaches what
+it knows and flags what it doesn't — an authoritative-looking trainer that
+taught a wrong pin would be worse than nothing.
+
 ## Features
 
 - **Visual editor** — drag-and-drop blocks (React Flow canvas), wire output

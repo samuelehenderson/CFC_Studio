@@ -1,5 +1,6 @@
 import { registry } from '../engine/blocks';
 import { useChartStore } from '../store/chartStore';
+import { ProvBadge } from './ProvBadge';
 import type { ParamDef, Value } from '../engine/types';
 
 /** Right-hand inspector: edit the selected block's params, sequence, label,
@@ -35,10 +36,14 @@ export function Inspector() {
   return (
     <aside className="inspector">
       <h2>{def.name}</h2>
-      <p className="muted">
-        {def.type} · {def.category}
+      <p className="muted" style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+        <span>
+          {def.type} · {def.category}
+        </span>
+        <ProvBadge provenance={def.provenance ?? 'inferred'} />
       </p>
       <p className="muted">{def.description}</p>
+      {def.sourceDoc && <p className="source-note">Source: {def.sourceDoc}</p>}
 
       <div className="field">
         <label>Label</label>

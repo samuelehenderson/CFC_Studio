@@ -25,6 +25,7 @@ function Flow() {
   const setSelected = useChartStore((s) => s.setSelected);
   const addBlock = useChartStore((s) => s.addBlock);
   const warnings = useChartStore((s) => s.warnings);
+  const theme = useChartStore((s) => s.theme);
 
   const wrapper = useRef<HTMLDivElement>(null);
   const rfRef = useRef<ReactFlowInstance<CfcNode, Edge> | null>(null);
@@ -73,7 +74,7 @@ function Flow() {
         proOptions={{ hideAttribution: true }}
         defaultEdgeOptions={{ type: 'smoothstep' }}
       >
-        <Background gap={16} color="#1e293b" />
+        <Background gap={16} color={theme === 'light' ? '#dbe2ea' : '#1e293b'} />
         <Controls />
         <MiniMap
           pannable

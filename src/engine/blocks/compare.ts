@@ -15,7 +15,10 @@ function comparator(type: string, name: string, dtype: 'REAL' | 'INT'): BlockDef
     type,
     name,
     category: 'Compare',
-    description: `Compares IN1 with IN2 and drives all six relational outputs (GT, GE, EQ, NE, LE, LT).`,
+    description:
+      dtype === 'REAL'
+        ? 'Compares IN1 with IN2 and drives all six relational outputs (GT, GE, EQ, NE, LE, LT). Note: EQ/NE use exact REAL equality (as Siemens does) — two computed floats that "look" equal may compare unequal; prefer a small GT/LT band over EQ on analog values.'
+        : 'Compares IN1 with IN2 and drives all six relational outputs (GT, GE, EQ, NE, LE, LT).',
     color: C,
     inputs: [
       { id: 'in1', name: 'IN1', type: dtype, default: 0 },

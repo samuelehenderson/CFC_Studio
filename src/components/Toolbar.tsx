@@ -37,9 +37,6 @@ export function Toolbar() {
 
   return (
     <div className="toolbar">
-      <div className="brand">
-        CFC<span>Studio</span>
-      </div>
       {running ? (
         <button onClick={pause}>⏸ Pause</button>
       ) : (

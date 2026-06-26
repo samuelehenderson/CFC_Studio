@@ -129,4 +129,33 @@ describe('closed loop', () => {
     // Should settle near the 72°F setpoint.
     expect(Math.abs(temp - 72)).toBeLessThan(1.0);
   });
+
+  it('CONT_C (SIMATIC PID) settles a lagged plant at its setpoint', () => {
+    // SP_INT 72 -> CONT_C.LMN -> valve gain 0.5 -> +ambient 58 -> PT1 -> PV_IN
+    const sim = new Simulator(
+      [
+        inst('sp', 'CONST', { value: 72 }, 10),
+        inst('pid', 'CONT_C', { gain: 6, ti: 20, td: 0, lmn_hlm: 100, lmn_llm: 0 }, 20),
+        inst('gain', 'CONST', { value: 0.5 }, 30),
+        inst('mul', 'MUL_R', {}, 40),
+        inst('amb', 'CONST', { value: 58 }, 50),
+        inst('add', 'ADD_R', {}, 60),
+        inst('lag', 'PT1_P', { t: 5 }, 70),
+      ],
+      [
+        wire('w1', 'sp', 'y', 'pid', 'sp_int'),
+        wire('w2', 'pid', 'lmn', 'mul', 'in1'),
+        wire('w3', 'gain', 'y', 'mul', 'in2'),
+        wire('w4', 'mul', 'out', 'add', 'in1'),
+        wire('w5', 'amb', 'y', 'add', 'in2'),
+        wire('w6', 'add', 'out', 'lag', 'in1'),
+        wire('w7', 'lag', 'out', 'pid', 'pv_in'),
+      ],
+      registry,
+    );
+    expect(sim.feedbackConnIds.has('w7')).toBe(true);
+    let temp = 0;
+    for (let i = 0; i < 4000; i++) temp = sim.step(0.1).outputs.lag.out as number;
+    expect(Math.abs(temp - 72)).toBeLessThan(1.0);
+  });
 });

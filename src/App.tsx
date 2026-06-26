@@ -1,23 +1,33 @@
 import { useEffect } from 'react';
-import { Toolbar } from './components/Toolbar';
-import { Palette } from './components/Palette';
-import { Canvas } from './components/Canvas';
-import { Inspector } from './components/Inspector';
+import { Topbar } from './components/Topbar';
+import { EditorView } from './components/EditorView';
+import { ReferenceView } from './components/ReferenceView';
+import { PlaceholderTab } from './components/PlaceholderTab';
 import { useChartStore } from './store/chartStore';
 
 export function App() {
-  // Load the sample chart on first mount so the app isn't empty.
+  const activeTab = useChartStore((s) => s.activeTab);
+
+  // Load the sample chart once so the Editor isn't empty on first run.
   useEffect(() => {
     const s = useChartStore.getState();
     if (s.nodes.length === 0) s.loadSample();
   }, []);
 
   return (
-    <div className="app">
-      <Toolbar />
-      <Palette />
-      <Canvas />
-      <Inspector />
+    <div className="shell">
+      <Topbar />
+      <main className="tab-content">
+        {/* Editor stays mounted so the simulation keeps running across tabs. */}
+        <div style={{ position: 'absolute', inset: 0, display: activeTab === 'editor' ? 'block' : 'none' }}>
+          <EditorView />
+        </div>
+        {activeTab === 'reference' && <ReferenceView />}
+        {activeTab === 'learn' && <PlaceholderTab tab="learn" />}
+        {activeTab === 'plant' && <PlaceholderTab tab="plant" />}
+        {activeTab === 'scope' && <PlaceholderTab tab="scope" />}
+        {activeTab === 'translate' && <PlaceholderTab tab="translate" />}
+      </main>
     </div>
   );
 }
