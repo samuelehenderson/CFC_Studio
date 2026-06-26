@@ -21,10 +21,17 @@ building controls"):
 |---|---|
 | **Learn** | Guided, auto-checked curriculum that drives the real editor *(roadmap)* |
 | **Editor** | Build & simulate charts — the working home base |
-| **Plant** | Live animated equipment (AHU/VAV/boiler/chiller) the chart controls *(roadmap)* |
-| **Scope** | Trends & data recorder for pin values over time *(roadmap)* |
+| **Plant** | Live animated AHU the chart actually controls, closed-loop — **live now** |
+| **Scope** | Oscilloscope / data recorder for pin values over time — **live now** |
 | **Translate** | PPCL → CFC migration bench *(roadmap)* |
 | **Reference** | Auto-generated block datasheets with provenance badges — **live now** |
+
+Try it: open the **Plant** tab → **Load AHU demo chart** → **Run simulation** (bump
+the Editor speed to 20×) and watch the heating PID settle the zone at setpoint,
+with the heating coil glowing and the fan spinning. Flip to **Scope** to see the
+same run as live traces.
+
+![Plant tab — live AHU](docs/plant.png)
 
 Light & dark themes, persisted across sessions.
 

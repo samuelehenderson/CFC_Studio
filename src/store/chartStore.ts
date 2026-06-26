@@ -20,6 +20,9 @@ import type { BlockInstance, Connection, Value } from '../engine/types';
 import { registry } from '../engine/blocks';
 import { Simulator } from '../engine/simulator';
 import { buildSample } from '../engine/sample';
+import { buildAhuSample } from '../engine/ahuSample';
+import { getPlantModel } from '../engine/plant';
+import type { PlantState } from '../engine/plant/types';
 
 export interface CfcNodeData extends Record<string, unknown> {
   blockType: string;
@@ -69,6 +72,35 @@ function readTab(): TabId {
   return 'editor';
 }
 
+/** A signal followed by the Scope. */
+export interface WatchSeries {
+  id: string; // `${nodeId}:${source}:${pinId}`
+  nodeId: string;
+  pinId: string;
+  source: 'output' | 'input';
+  label: string;
+  kind: 'analog' | 'binary';
+  color: string;
+}
+
+/** One recorded time sample: simulated time + value per watched series id. */
+export interface Sample {
+  t: number;
+  v: Record<string, number>;
+}
+
+/** Plant binding: which chart node feeds each plant port. */
+export interface PlantConfig {
+  modelId: string;
+  bindings: Record<string, string>; // portId -> nodeId
+}
+
+const SERIES_COLORS = [
+  '#38bdf8', '#22c55e', '#f59e0b', '#e879f9', '#fb7185',
+  '#a3e635', '#2dd4bf', '#facc15', '#c084fc', '#60a5fa',
+];
+const HISTORY_MAX = 3000;
+
 interface ChartState {
   nodes: CfcNode[];
   edges: Edge[];
@@ -79,6 +111,20 @@ interface ChartState {
   theme: Theme;
   setTab: (t: TabId) => void;
   toggleTheme: () => void;
+
+  // scope (trends)
+  watch: WatchSeries[];
+  history: Sample[];
+  addWatch: (s: Omit<WatchSeries, 'color'>) => void;
+  removeWatch: (id: string) => void;
+  clearWatch: () => void;
+  autoWatchIO: () => void;
+
+  // plant
+  plant: PlantConfig | null;
+  plantState: PlantState | null;
+  setPlantModel: (modelId: string | null) => void;
+  setPlantBinding: (portId: string, nodeId: string) => void;
 
   // simulation
   running: boolean;
@@ -113,6 +159,7 @@ interface ChartState {
   serialize: () => string;
   load: (json: string) => void;
   loadSample: () => void;
+  loadAhuDemo: () => void;
   clear: () => void;
 }
 
@@ -165,6 +212,61 @@ export const useChartStore = create<ChartState>((set, get) => ({
       /* ignore */
     }
     set({ theme });
+  },
+
+  watch: [],
+  history: [],
+  plant: null,
+  plantState: null,
+
+  addWatch: (s) => {
+    if (get().watch.some((w) => w.id === s.id)) return;
+    const color = SERIES_COLORS[get().watch.length % SERIES_COLORS.length];
+    set({ watch: [...get().watch, { ...s, color }] });
+  },
+  removeWatch: (id) => set({ watch: get().watch.filter((w) => w.id !== id) }),
+  clearWatch: () => set({ watch: [], history: [] }),
+  autoWatchIO: () => {
+    const watch: WatchSeries[] = [];
+    let i = 0;
+    for (const n of get().nodes) {
+      const t = n.data.blockType;
+      if (t === 'AI' || t === 'AO' || t === 'BI' || t === 'BO') {
+        const kind: 'analog' | 'binary' = t === 'BI' || t === 'BO' ? 'binary' : 'analog';
+        watch.push({
+          id: `${n.id}:output:y`,
+          nodeId: n.id,
+          pinId: 'y',
+          source: 'output',
+          label: n.data.label || t,
+          kind,
+          color: SERIES_COLORS[i % SERIES_COLORS.length],
+        });
+        i++;
+      }
+    }
+    set({ watch, history: [] });
+  },
+
+  setPlantModel: (modelId) => {
+    if (!modelId) {
+      set({ plant: null, plantState: null });
+      return;
+    }
+    const model = getPlantModel(modelId);
+    if (!model) return;
+    const bindings: Record<string, string> = {};
+    for (const port of model.ports) {
+      const want = port.name.toLowerCase();
+      const match = get().nodes.find((n) => (n.data.label || '').toLowerCase() === want);
+      if (match) bindings[port.id] = match.id;
+    }
+    set({ plant: { modelId, bindings }, plantState: model.init() });
+  },
+  setPlantBinding: (portId, nodeId) => {
+    const plant = get().plant;
+    if (!plant) return;
+    set({ plant: { ...plant, bindings: { ...plant.bindings, [portId]: nodeId } } });
   },
 
   running: false,
@@ -278,13 +380,55 @@ export const useChartStore = create<ChartState>((set, get) => ({
     const sim = get().sim!;
     const dt = (get().cycleMs / 1000) * get().speed;
     const live = sim.step(dt);
-    set({ live, time: sim.time });
+
+    // Step the plant in lockstep: read command points (this cycle's outputs),
+    // advance physics, write sensor values into the bound AI/BI inputs.
+    let plantState = get().plantState;
+    const plant = get().plant;
+    const model = plant ? getPlantModel(plant.modelId) : undefined;
+    if (plant && model) {
+      const cmd: Record<string, number> = {};
+      for (const port of model.ports) {
+        if (port.dir !== 'command') continue;
+        const nodeId = plant.bindings[port.id];
+        const raw = nodeId ? live.outputs[nodeId]?.y : undefined;
+        cmd[port.id] = typeof raw === 'boolean' ? (raw ? 1 : 0) : Number(raw ?? 0);
+      }
+      plantState = model.step(plantState ?? model.init(), dt, cmd);
+      for (const port of model.ports) {
+        if (port.dir !== 'sensor') continue;
+        const nodeId = plant.bindings[port.id];
+        if (nodeId) sim.setParam(nodeId, 'value', plantState[port.id]);
+      }
+    }
+
+    // Record watched signals into the ring buffer.
+    const watch = get().watch;
+    let history = get().history;
+    if (watch.length) {
+      const v: Record<string, number> = {};
+      for (const w of watch) {
+        const bucket = w.source === 'output' ? live.outputs[w.nodeId] : live.inputs[w.nodeId];
+        const raw = bucket?.[w.pinId];
+        v[w.id] = typeof raw === 'boolean' ? (raw ? 1 : 0) : Number(raw ?? 0);
+      }
+      history = history.length >= HISTORY_MAX ? history.slice(history.length - HISTORY_MAX + 1) : history.slice();
+      history.push({ t: sim.time, v });
+    }
+
+    set({ live, time: sim.time, plantState, history });
   },
 
   reset: () => {
     get().pause();
     get().sim?.reset();
-    set({ time: 0, live: get().sim?.snapshot() ?? { inputs: {}, outputs: {} } });
+    const model = get().plant ? getPlantModel(get().plant!.modelId) : undefined;
+    set({
+      time: 0,
+      live: get().sim?.snapshot() ?? { inputs: {}, outputs: {} },
+      history: [],
+      plantState: model ? model.init() : null,
+    });
   },
 
   setSpeed: (s) => set({ speed: s }),
@@ -340,13 +484,33 @@ export const useChartStore = create<ChartState>((set, get) => ({
       const m = /_(\d+)$/.exec(n.id);
       if (m) nodeCounter = Math.max(nodeCounter, Number(m[1]));
     }
-    set({ nodes, edges, selectedId: null, time: 0 });
+    set({ nodes, edges, selectedId: null, time: 0, plant: null, plantState: null, history: [] });
     get().buildSim();
+    get().autoWatchIO();
+  },
+
+  loadAhuDemo: () => {
+    get().pause();
+    const { nodes, edges } = buildAhuSample();
+    set({ nodes, edges, selectedId: null, time: 0, history: [] });
+    get().buildSim();
+    get().setPlantModel('ahu'); // auto-binds by matching labels
+    get().autoWatchIO();
   },
 
   clear: () => {
     get().pause();
-    set({ nodes: [], edges: [], selectedId: null, time: 0, live: { inputs: {}, outputs: {} } });
+    set({
+      nodes: [],
+      edges: [],
+      selectedId: null,
+      time: 0,
+      live: { inputs: {}, outputs: {} },
+      watch: [],
+      history: [],
+      plant: null,
+      plantState: null,
+    });
     get().buildSim();
   },
 }));

@@ -6,7 +6,9 @@ interface PlannedTab {
   cards: { title: string; body: string }[];
 }
 
-const CONTENT: Record<Exclude<TabId, 'editor' | 'reference'>, PlannedTab> = {
+type PendingTab = Extract<TabId, 'learn' | 'translate'>;
+
+const CONTENT: Record<PendingTab, PlannedTab> = {
   learn: {
     title: 'Learn',
     lede: 'The training spine: a guided, auto-checked curriculum that drives the real editor. You build charts to learn CFC by doing — from logic and timers to PID loops and full HVAC sequences — with the lesson grading your chart on its actual simulated behavior.',
@@ -15,26 +17,6 @@ const CONTENT: Record<Exclude<TabId, 'editor' | 'reference'>, PlannedTab> = {
       { title: 'In-canvas tutorials', body: 'Stepper with anchored callouts and a 3-tier hint ladder right on the chart.' },
       { title: 'Behavioral auto-checker', body: 'Runs your chart against a scripted stimulus and grades observed behavior within tolerance — any correct topology passes.' },
       { title: 'Quizzes & challenges', body: 'Spot-checks and open "build this" exercises with auto-scored signal traces.' },
-    ],
-  },
-  plant: {
-    title: 'Plant',
-    lede: 'The standout feature: a live, animated mechanical schematic that your chart actually controls. PPCL engineers think in equipment, not data-flow — watch your loop spin a fan, stroke a valve, and settle a room in real time.',
-    cards: [
-      { title: 'Selectable equipment', body: 'AHU, VAV box, boiler, chiller plant — each a pluggable lumped-physics model.' },
-      { title: 'Point-bound animation', body: 'Valves, dampers, fans and coils driven by your AO points; sensors feed your AI points.' },
-      { title: 'In lockstep with the solver', body: 'The plant is just another cyclic system: it reads commands and writes sensor values every cycle.' },
-      { title: 'Scenario & fault injection', body: 'Inject weather swings, stuck dampers or sensor faults and watch the control respond.' },
-    ],
-  },
-  scope: {
-    title: 'Scope',
-    lede: 'An oscilloscope and data recorder for your chart. Plot any pin over time, scrub the timeline, and measure control performance — overshoot, settling time, integrated error — as you tune.',
-    cards: [
-      { title: 'Multi-trace plotting', body: 'Analog line traces and boolean step traces on a shared, scrubbable timeline.' },
-      { title: 'Watch list', body: 'Pin any pin to follow it; cursor readout shows exact values at any instant.' },
-      { title: 'Run-vs-run ghosts', body: 'Overlay a previous run to compare tuning changes side by side.' },
-      { title: 'Export', body: 'CSV of the recorded signals and PNG of the trace for reports.' },
     ],
   },
   translate: {
@@ -49,8 +31,8 @@ const CONTENT: Record<Exclude<TabId, 'editor' | 'reference'>, PlannedTab> = {
   },
 };
 
-/** Polished "coming soon" view for tabs whose runtime lands in Phase 2/3. */
-export function PlaceholderTab({ tab }: { tab: Exclude<TabId, 'editor' | 'reference'> }) {
+/** Polished "coming soon" view for tabs whose runtime lands in a later phase. */
+export function PlaceholderTab({ tab }: { tab: PendingTab }) {
   const c = CONTENT[tab];
   return (
     <div className="tabview">

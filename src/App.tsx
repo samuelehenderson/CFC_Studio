@@ -2,6 +2,8 @@ import { useEffect } from 'react';
 import { Topbar } from './components/Topbar';
 import { EditorView } from './components/EditorView';
 import { ReferenceView } from './components/ReferenceView';
+import { ScopeView } from './components/ScopeView';
+import { PlantView } from './components/PlantView';
 import { PlaceholderTab } from './components/PlaceholderTab';
 import { useChartStore } from './store/chartStore';
 
@@ -23,9 +25,9 @@ export function App() {
           <EditorView />
         </div>
         {activeTab === 'reference' && <ReferenceView />}
+        {activeTab === 'scope' && <ScopeView />}
+        {activeTab === 'plant' && <PlantView />}
         {activeTab === 'learn' && <PlaceholderTab tab="learn" />}
-        {activeTab === 'plant' && <PlaceholderTab tab="plant" />}
-        {activeTab === 'scope' && <PlaceholderTab tab="scope" />}
         {activeTab === 'translate' && <PlaceholderTab tab="translate" />}
       </main>
     </div>
