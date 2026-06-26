@@ -23,6 +23,8 @@ import { buildSample } from '../engine/sample';
 import { buildAhuSample } from '../engine/ahuSample';
 import { getPlantModel } from '../engine/plant';
 import type { PlantState } from '../engine/plant/types';
+import { runChart } from '../engine/checker';
+import { findLesson } from '../engine/lessons';
 
 export interface CfcNodeData extends Record<string, unknown> {
   blockType: string;
@@ -47,6 +49,23 @@ export type Theme = 'dark' | 'light';
 
 const THEME_KEY = 'cfc.theme';
 const TAB_KEY = 'cfc.tab';
+const DONE_KEY = 'cfc.completedLessons';
+
+export interface LessonResult {
+  id: string;
+  label: string;
+  pass: boolean;
+}
+
+function readCompleted(): string[] {
+  try {
+    const raw = localStorage.getItem(DONE_KEY);
+    if (raw) return JSON.parse(raw) as string[];
+  } catch {
+    /* ignore */
+  }
+  return [];
+}
 
 /** Read persisted/system theme and apply it to <html>. Called once at boot. */
 export function initTheme(): Theme {
@@ -125,6 +144,14 @@ interface ChartState {
   plantState: PlantState | null;
   setPlantModel: (modelId: string | null) => void;
   setPlantBinding: (portId: string, nodeId: string) => void;
+
+  // learn
+  activeLessonId: string | null;
+  lessonResults: LessonResult[] | null;
+  completedLessons: string[];
+  setActiveLesson: (id: string | null) => void;
+  startLesson: (id: string) => void;
+  checkLesson: () => void;
 
   // simulation
   running: boolean;
@@ -218,6 +245,70 @@ export const useChartStore = create<ChartState>((set, get) => ({
   history: [],
   plant: null,
   plantState: null,
+  activeLessonId: null,
+  lessonResults: null,
+  completedLessons: readCompleted(),
+
+  setActiveLesson: (id) => set({ activeLessonId: id, lessonResults: null }),
+
+  startLesson: (id) => {
+    const lesson = findLesson(id);
+    if (!lesson) return;
+    get().pause();
+    const { nodes, edges } = lesson.starter();
+    for (const n of nodes) {
+      const m = /_(\d+)$/.exec(n.id);
+      if (m) nodeCounter = Math.max(nodeCounter, Number(m[1]));
+    }
+    set({
+      nodes,
+      edges,
+      selectedId: null,
+      time: 0,
+      history: [],
+      plant: null,
+      plantState: null,
+      activeLessonId: id,
+      lessonResults: null,
+    });
+    get().buildSim();
+    // If the lesson is graded against a plant, attach it so the learner can watch.
+    const plantCheck = lesson.checks.find((c) => c.run.plantModelId);
+    if (plantCheck?.run.plantModelId) get().setPlantModel(plantCheck.run.plantModelId);
+    get().autoWatchIO();
+  },
+
+  checkLesson: () => {
+    const lesson = findLesson(get().activeLessonId ?? '');
+    if (!lesson) return;
+    const nodes = get().nodes.map((n) => ({ id: n.id, data: n.data }));
+    const edges = get().edges.map((e) => ({
+      id: e.id,
+      source: e.source,
+      target: e.target,
+      sourceHandle: e.sourceHandle,
+      targetHandle: e.targetHandle,
+    }));
+    const results: LessonResult[] = lesson.checks.map((c) => {
+      let pass = false;
+      try {
+        pass = c.test(runChart(nodes, edges, c.run));
+      } catch {
+        pass = false;
+      }
+      return { id: c.id, label: c.label, pass };
+    });
+    let completed = get().completedLessons;
+    if (results.every((r) => r.pass) && !completed.includes(lesson.id)) {
+      completed = [...completed, lesson.id];
+      try {
+        localStorage.setItem(DONE_KEY, JSON.stringify(completed));
+      } catch {
+        /* ignore */
+      }
+    }
+    set({ lessonResults: results, completedLessons: completed });
+  },
 
   addWatch: (s) => {
     if (get().watch.some((w) => w.id === s.id)) return;

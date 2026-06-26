@@ -19,7 +19,7 @@ building controls"):
 
 | Tab | What it does |
 |---|---|
-| **Learn** | Guided, auto-checked curriculum that drives the real editor *(roadmap)* |
+| **Learn** | Guided lessons graded by a behavioral auto-checker — **live now** |
 | **Editor** | Build & simulate charts — the working home base |
 | **Plant** | Live animated AHU the chart actually controls, closed-loop — **live now** |
 | **Scope** | Oscilloscope / data recorder for pin values over time — **live now** |
@@ -32,6 +32,13 @@ with the heating coil glowing and the fan spinning. Flip to **Scope** to see the
 same run as live traces.
 
 ![Plant tab — live AHU](docs/plant.png)
+
+In the **Learn** tab, each lesson loads a starter chart; you wire it in the
+Editor, then **Check my work** runs your chart against a scripted scenario (and,
+for the capstone, the live AHU plant) and grades it on *observed behavior* — so
+any correct solution passes, not one fixed answer.
+
+![Learn tab — auto-graded lesson](docs/learn.png)
 
 Light & dark themes, persisted across sessions.
 

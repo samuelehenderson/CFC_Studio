@@ -6,19 +6,9 @@ interface PlannedTab {
   cards: { title: string; body: string }[];
 }
 
-type PendingTab = Extract<TabId, 'learn' | 'translate'>;
+type PendingTab = Extract<TabId, 'translate'>;
 
 const CONTENT: Record<PendingTab, PlannedTab> = {
-  learn: {
-    title: 'Learn',
-    lede: 'The training spine: a guided, auto-checked curriculum that drives the real editor. You build charts to learn CFC by doing — from logic and timers to PID loops and full HVAC sequences — with the lesson grading your chart on its actual simulated behavior.',
-    cards: [
-      { title: 'Module map', body: 'Lessons with prerequisites and progress, from "What is CFC?" through PPCL migration.' },
-      { title: 'In-canvas tutorials', body: 'Stepper with anchored callouts and a 3-tier hint ladder right on the chart.' },
-      { title: 'Behavioral auto-checker', body: 'Runs your chart against a scripted stimulus and grades observed behavior within tolerance — any correct topology passes.' },
-      { title: 'Quizzes & challenges', body: 'Spot-checks and open "build this" exercises with auto-scored signal traces.' },
-    ],
-  },
   translate: {
     title: 'Translate',
     lede: 'The PPCL → CFC migration bench — the reason this project exists. Paste PPCL and see the equivalent CFC blocks, with a morph animation and a mapping table. Framed as a teaching aid, not an automated transpiler (Siemens migration is manual).',
