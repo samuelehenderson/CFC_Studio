@@ -8,6 +8,7 @@ export function Diagnostics() {
   const edges = useChartStore((s) => s.edges);
   const warnings = useChartStore((s) => s.warnings);
   const setSelected = useChartStore((s) => s.setSelected);
+  const insertConvert = useChartStore((s) => s.insertConvert);
   const [open, setOpen] = useState(false);
 
   const problems = useMemo<Problem[]>(() => {
@@ -45,15 +46,17 @@ export function Diagnostics() {
             <div className="diag-empty">No validation problems. Type-mismatched wires, algebraic loops, and duplicate labels show up here.</div>
           ) : (
             problems.map((p) => (
-              <button
-                key={p.id}
-                className={`diag-item ${p.severity}`}
-                onClick={() => p.nodeId && setSelected(p.nodeId)}
-                disabled={!p.nodeId}
-              >
+              <div key={p.id} className={`diag-item ${p.severity}`}>
                 <span className="ic">{p.severity === 'error' ? '✗' : p.severity === 'warning' ? '⚠' : 'ⓘ'}</span>
-                <span>{p.message}</span>
-              </button>
+                <button className="diag-msg" onClick={() => p.nodeId && setSelected(p.nodeId)} disabled={!p.nodeId}>
+                  {p.message}
+                </button>
+                {p.fix && (
+                  <button className="diag-fix" onClick={() => insertConvert(p.fix!)} title={`Insert a ${p.fix.convertType} block`}>
+                    Fix: insert {p.fix.convertType}
+                  </button>
+                )}
+              </div>
             ))
           )}
         </div>

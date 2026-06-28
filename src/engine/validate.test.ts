@@ -16,7 +16,11 @@ describe('chart validation', () => {
     const nodes = [n('b', 'BCONST', 'Flag'), n('ao', 'AO', 'Cmd')];
     const edges = [e('b', 'y', 'ao', 'x')];
     const problems = validateChart(nodes, edges);
-    expect(problems.some((p) => p.id.startsWith('type:') && /mismatch/i.test(p.message))).toBe(true);
+    const mismatch = problems.find((p) => p.id.startsWith('type:'));
+    expect(mismatch && /mismatch/i.test(mismatch.message)).toBeTruthy();
+    // and it offers a one-click B_R CONVERT fix
+    expect(mismatch?.fix?.kind).toBe('insertConvert');
+    expect(mismatch?.fix?.convertType).toBe('B_R');
   });
 
   it('accepts a type-matched connection', () => {

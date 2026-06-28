@@ -10,19 +10,36 @@ import type { Edge } from '@xyflow/react';
 import type { DataType } from './types';
 import { registry } from './blocks';
 
+/** A one-click fix: insert a CONVERT block on a type-mismatched wire. */
+export interface InsertConvertFix {
+  kind: 'insertConvert';
+  edgeId: string;
+  source: string;
+  sourcePin: string;
+  target: string;
+  targetPin: string;
+  convertType: string;
+}
+
 export interface Problem {
   id: string;
   severity: 'error' | 'warning' | 'info';
   message: string;
   nodeId?: string;
+  fix?: InsertConvertFix;
+}
+
+/** The CONVERT block whose input/output types exactly bridge from→to, or null. */
+function convertType(from: DataType, to: DataType): string | null {
+  if (from === 'REAL' && to === 'INT') return 'R_I';
+  if (from === 'INT' && to === 'REAL') return 'I_R';
+  if (from === 'REAL' && to === 'BOOL') return 'R_B';
+  if (from === 'BOOL' && to === 'REAL') return 'B_R';
+  return null; // e.g. INT↔BOOL has no single bridging block — fix by hand
 }
 
 function convertHint(from: DataType, to: DataType): string {
-  if (from === 'REAL' && to === 'INT') return 'R_I';
-  if (from === 'INT' && to === 'REAL') return 'I_R';
-  if (to === 'BOOL') return 'R_B';
-  if (from === 'BOOL') return 'B_R';
-  return 'a CONVERT';
+  return convertType(from, to) ?? 'a CONVERT';
 }
 
 export function validateChart(nodes: CfcNode[], edges: Edge[]): Problem[] {
@@ -40,11 +57,23 @@ export function validateChart(nodes: CfcNode[], edges: Edge[]): Problem[] {
     const op = sdef.outputs.find((p) => p.id === e.sourceHandle);
     const ip = tdef.inputs.find((p) => p.id === e.targetHandle);
     if (op && ip && op.type !== ip.type) {
+      const ct = convertType(op.type, ip.type);
       problems.push({
         id: `type:${e.id}`,
         severity: 'warning',
         message: `Type mismatch: ${s.data.label || sdef.type}.${op.name} (${op.type}) → ${t.data.label || tdef.type}.${ip.name} (${ip.type}). Real CFC needs a ${convertHint(op.type, ip.type)} CONVERT block here.`,
         nodeId: t.id,
+        fix: ct
+          ? {
+              kind: 'insertConvert',
+              edgeId: e.id,
+              source: e.source,
+              sourcePin: e.sourceHandle ?? '',
+              target: e.target,
+              targetPin: e.targetHandle ?? '',
+              convertType: ct,
+            }
+          : undefined,
       });
     }
   }

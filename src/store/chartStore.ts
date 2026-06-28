@@ -25,6 +25,7 @@ import { getPlantModel } from '../engine/plant';
 import type { PlantState, PlantScenario } from '../engine/plant/types';
 import { runChart } from '../engine/checker';
 import { findLesson } from '../engine/lessons';
+import type { InsertConvertFix } from '../engine/validate';
 
 export interface CfcNodeData extends Record<string, unknown> {
   blockType: string;
@@ -206,6 +207,7 @@ interface ChartState {
   setLabel: (id: string, label: string) => void;
   setFeedbackStart: (id: string, value: boolean) => void;
   reorderSequence: (orderedIds: string[]) => void;
+  insertConvert: (fix: InsertConvertFix) => void;
   showSequence: boolean;
   toggleSequence: () => void;
 
@@ -643,6 +645,48 @@ export const useChartStore = create<ChartState>((set, get) => ({
         seqOf.has(n.id) ? { ...n, data: { ...n.data, sequence: seqOf.get(n.id)! } } : n,
       ),
     });
+    get().buildSim();
+    get().scheduleSave();
+  },
+
+  insertConvert: (fix) => {
+    const def = registry[fix.convertType];
+    const nodes = get().nodes;
+    const sNode = nodes.find((n) => n.id === fix.source);
+    const tNode = nodes.find((n) => n.id === fix.target);
+    if (!def || !sNode || !tNode) return;
+    get().pushHistory();
+    const id = nextId(fix.convertType);
+    const params: Record<string, Value | string> = {};
+    for (const p of def.params ?? []) params[p.id] = p.default;
+    const sSeq = sNode.data.sequence ?? 0;
+    const tSeq = tNode.data.sequence ?? 0;
+    const sequence = sSeq < tSeq ? Math.round((sSeq + tSeq) / 2) : sSeq + 1;
+    const conv: CfcNode = {
+      id,
+      type: 'cfcBlock',
+      position: {
+        x: Math.round((sNode.position.x + tNode.position.x) / 2),
+        y: Math.round((sNode.position.y + tNode.position.y) / 2) - 40,
+      },
+      data: { blockType: fix.convertType, params, sequence },
+    };
+    const edges = get().edges.filter((e) => e.id !== fix.edgeId);
+    const e1: Edge = {
+      id: `e_${fix.source}.${fix.sourcePin}-${id}.in1`,
+      source: fix.source,
+      sourceHandle: fix.sourcePin,
+      target: id,
+      targetHandle: 'in1',
+    };
+    const e2: Edge = {
+      id: `e_${id}.out-${fix.target}.${fix.targetPin}`,
+      source: id,
+      sourceHandle: 'out',
+      target: fix.target,
+      targetHandle: fix.targetPin,
+    };
+    set({ nodes: [...nodes, conv], edges: [...edges, e1, e2], selectedId: id });
     get().buildSim();
     get().scheduleSave();
   },
