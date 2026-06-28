@@ -26,6 +26,21 @@ export interface PlantModel {
   ports: PlantPort[];
   /** Build initial state. */
   init: () => PlantState;
-  /** Advance physics by dt seconds given the latest command values. */
-  step: (state: PlantState, dt: number, cmd: Record<string, number>) => PlantState;
+  /**
+   * Advance physics by dt seconds given the latest command values, and an
+   * optional scenario (disturbances + injected faults).
+   */
+  step: (
+    state: PlantState,
+    dt: number,
+    cmd: Record<string, number>,
+    scenario?: PlantScenario,
+  ) => PlantState;
+}
+
+/** Disturbances and injected faults the user can apply from the Plant tab. */
+export interface PlantScenario {
+  oat?: number;
+  heatStuck?: boolean; // heating valve stuck closed (ignores command)
+  sensorFail?: boolean; // space-temp sensor frozen (control flies blind)
 }

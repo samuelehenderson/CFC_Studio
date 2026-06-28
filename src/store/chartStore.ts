@@ -22,7 +22,7 @@ import { Simulator } from '../engine/simulator';
 import { buildSample } from '../engine/sample';
 import { buildAhuSample } from '../engine/ahuSample';
 import { getPlantModel } from '../engine/plant';
-import type { PlantState } from '../engine/plant/types';
+import type { PlantState, PlantScenario } from '../engine/plant/types';
 import { runChart } from '../engine/checker';
 import { findLesson } from '../engine/lessons';
 
@@ -154,6 +154,8 @@ interface ChartState {
   plantState: PlantState | null;
   setPlantModel: (modelId: string | null) => void;
   setPlantBinding: (portId: string, nodeId: string) => void;
+  plantScenario: PlantScenario;
+  setPlantScenario: (s: Partial<PlantScenario>) => void;
 
   // learn
   activeLessonId: string | null;
@@ -269,6 +271,7 @@ export const useChartStore = create<ChartState>((set, get) => ({
   history: [],
   plant: null,
   plantState: null,
+  plantScenario: { oat: 40, heatStuck: false, sensorFail: false },
   activeLessonId: null,
   lessonResults: null,
   completedLessons: readCompleted(),
@@ -506,6 +509,7 @@ export const useChartStore = create<ChartState>((set, get) => ({
     if (!plant) return;
     set({ plant: { ...plant, bindings: { ...plant.bindings, [portId]: nodeId } } });
   },
+  setPlantScenario: (partial) => set({ plantScenario: { ...get().plantScenario, ...partial } }),
 
   running: false,
   sim: null,
@@ -648,7 +652,7 @@ export const useChartStore = create<ChartState>((set, get) => ({
         const raw = nodeId ? live.outputs[nodeId]?.y : undefined;
         cmd[port.id] = typeof raw === 'boolean' ? (raw ? 1 : 0) : Number(raw ?? 0);
       }
-      plantState = model.step(plantState ?? model.init(), dt, cmd);
+      plantState = model.step(plantState ?? model.init(), dt, cmd, get().plantScenario);
       for (const port of model.ports) {
         if (port.dir !== 'sensor') continue;
         const nodeId = plant.bindings[port.id];

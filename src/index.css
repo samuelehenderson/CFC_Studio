@@ -744,6 +744,11 @@ input {
   margin-top: var(--space-4);
   align-items: start;
 }
+.plant-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
 .plant-bindings {
   background: var(--panel);
   border: 1px solid var(--border);

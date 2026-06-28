@@ -12,6 +12,8 @@ export function PlantView() {
   const setPlantBinding = useChartStore((s) => s.setPlantBinding);
   const loadAhuDemo = useChartStore((s) => s.loadAhuDemo);
   const start = useChartStore((s) => s.start);
+  const scenario = useChartStore((s) => s.plantScenario);
+  const setScenario = useChartStore((s) => s.setPlantScenario);
 
   const model = plant ? getPlantModel(plant.modelId) : undefined;
 
@@ -84,6 +86,47 @@ export function PlantView() {
         <div className="plant-layout">
           <AhuSchematic st={st} />
 
+          <div className="plant-side">
+            <div className="plant-bindings">
+              <h2 style={{ marginTop: 0 }}>Scenario</h2>
+              <div className="field">
+                <label>
+                  Outside air temp: <b>{(scenario.oat ?? 40).toFixed(0)}°F</b>
+                </label>
+                <input
+                  type="range"
+                  min={-10}
+                  max={100}
+                  step={1}
+                  value={scenario.oat ?? 40}
+                  onChange={(e) => setScenario({ oat: Number(e.target.value) })}
+                  style={{ width: '100%' }}
+                />
+              </div>
+              <div className="field row">
+                <input
+                  type="checkbox"
+                  checked={!!scenario.heatStuck}
+                  onChange={(e) => setScenario({ heatStuck: e.target.checked })}
+                  style={{ width: 'auto' }}
+                />
+                <label style={{ margin: 0 }}>Stuck heating valve (closed)</label>
+              </div>
+              <div className="field row">
+                <input
+                  type="checkbox"
+                  checked={!!scenario.sensorFail}
+                  onChange={(e) => setScenario({ sensorFail: e.target.checked })}
+                  style={{ width: 'auto' }}
+                />
+                <label style={{ margin: 0 }}>Failed space sensor (frozen)</label>
+              </div>
+              <p className="source-note" style={{ marginBottom: 0 }}>
+                Inject a fault and watch the loop respond — a stuck valve can’t hold setpoint; a failed
+                sensor flies blind while the real space drifts.
+              </p>
+            </div>
+
           <div className="plant-bindings">
             <h2 style={{ marginTop: 0 }}>Point bindings</h2>
             {model.ports.map((port) => {
@@ -118,6 +161,7 @@ export function PlantView() {
               Bound now: Space Temp ← {nodeLabel(plant.bindings.spaceTemp)}, Heating Valve →{' '}
               {nodeLabel(plant.bindings.heatVlv)}.
             </p>
+          </div>
           </div>
         </div>
       </div>
@@ -197,11 +241,13 @@ function AhuSchematic({ st }: { st: PlantState }) {
       <text x={545} y={62} className="ahu-label">Supply air</text>
       <text x={545} y={160} className="ahu-temp">{fmtT(st.supplyTemp)}</text>
 
-      {/* zone */}
+      {/* zone — shows the real (physical) temperature */}
       <rect x={560} y={210} width={150} height={110} rx={8} className="zone" />
       <text x={635} y={235} className="ahu-label" textAnchor="middle">Zone</text>
-      <text x={635} y={278} className="zone-temp" textAnchor="middle">{fmtT(st.spaceTemp)}</text>
-      <text x={635} y={300} className="ahu-small" textAnchor="middle">space temperature</text>
+      <text x={635} y={278} className="zone-temp" textAnchor="middle">{fmtT(st.spaceTempReal ?? st.spaceTemp)}</text>
+      <text x={635} y={300} className="ahu-small" textAnchor="middle">
+        {(st.sensorFault ?? 0) > 0.5 ? `⚠ sensor frozen at ${fmtT(st.spaceTemp)}` : 'space temperature'}
+      </text>
       {/* supply into zone */}
       <line x1={635} y1={140} x2={635} y2={210} className="duct-edge" />
     </svg>
