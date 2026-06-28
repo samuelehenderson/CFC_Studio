@@ -14,6 +14,10 @@ export function Toolbar() {
   const serialize = useChartStore((s) => s.serialize);
   const load = useChartStore((s) => s.load);
   const clear = useChartStore((s) => s.clear);
+  const undo = useChartStore((s) => s.undo);
+  const redo = useChartStore((s) => s.redo);
+  const canUndo = useChartStore((s) => s.past.length > 0);
+  const canRedo = useChartStore((s) => s.future.length > 0);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const save = () => {
@@ -48,6 +52,14 @@ export function Toolbar() {
         ⏭ Step
       </button>
       <button onClick={reset}>⟲ Reset</button>
+
+      <span style={{ width: 1, height: 22, background: 'var(--border)', margin: '0 4px' }} />
+      <button onClick={undo} disabled={!canUndo} title="Undo (Ctrl/Cmd+Z)">
+        ↶ Undo
+      </button>
+      <button onClick={redo} disabled={!canRedo} title="Redo (Ctrl/Cmd+Shift+Z)">
+        ↷ Redo
+      </button>
 
       <label style={{ color: 'var(--text-dim)', fontSize: 12, marginLeft: 8 }}>Speed</label>
       <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))}>

@@ -44,6 +44,16 @@ export interface LiveValues {
 let nodeCounter = 0;
 const nextId = (type: string) => `${type}_${++nodeCounter}`;
 
+interface Snapshot {
+  nodes: CfcNode[];
+  edges: Edge[];
+}
+const AUTOSAVE_KEY = 'cfc.autosave';
+const HISTORY_LIMIT = 60;
+let historyTag: string | null = null; // coalesces rapid same-field edits
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+let clipboard: CfcNode[] = [];
+
 export type TabId = 'learn' | 'editor' | 'plant' | 'scope' | 'translate' | 'reference';
 export type Theme = 'dark' | 'light';
 
@@ -162,6 +172,20 @@ interface ChartState {
   speed: number; // simulated-time multiplier
   warnings: string[];
 
+  // history / clipboard / persistence
+  past: Snapshot[];
+  future: Snapshot[];
+  pushHistory: (tag?: string) => void;
+  beginInteraction: () => void;
+  undo: () => void;
+  redo: () => void;
+  copySelection: () => void;
+  paste: () => void;
+  duplicateSelection: () => void;
+  deleteSelection: () => void;
+  scheduleSave: () => void;
+  restore: () => void;
+
   // graph editing
   onNodesChange: (c: NodeChange[]) => void;
   onEdgesChange: (c: EdgeChange[]) => void;
@@ -249,6 +273,126 @@ export const useChartStore = create<ChartState>((set, get) => ({
   lessonResults: null,
   completedLessons: readCompleted(),
 
+  past: [],
+  future: [],
+
+  pushHistory: (tag) => {
+    if (tag && tag === historyTag) return; // coalesce consecutive same-field edits
+    historyTag = tag ?? null;
+    const past = [...get().past, { nodes: get().nodes, edges: get().edges }].slice(-HISTORY_LIMIT);
+    set({ past, future: [] });
+  },
+
+  beginInteraction: () => get().pushHistory(),
+
+  undo: () => {
+    const past = get().past;
+    if (!past.length) return;
+    historyTag = null;
+    const prev = past[past.length - 1];
+    set({
+      past: past.slice(0, -1),
+      future: [...get().future, { nodes: get().nodes, edges: get().edges }].slice(-HISTORY_LIMIT),
+      nodes: prev.nodes,
+      edges: prev.edges,
+      selectedId: null,
+    });
+    get().buildSim();
+    get().scheduleSave();
+  },
+
+  redo: () => {
+    const future = get().future;
+    if (!future.length) return;
+    historyTag = null;
+    const next = future[future.length - 1];
+    set({
+      future: future.slice(0, -1),
+      past: [...get().past, { nodes: get().nodes, edges: get().edges }].slice(-HISTORY_LIMIT),
+      nodes: next.nodes,
+      edges: next.edges,
+      selectedId: null,
+    });
+    get().buildSim();
+    get().scheduleSave();
+  },
+
+  copySelection: () => {
+    const sel = get().nodes.filter((n) => n.selected);
+    clipboard = sel.length ? sel : get().nodes.filter((n) => n.id === get().selectedId);
+  },
+
+  paste: () => {
+    if (!clipboard.length) return;
+    get().pushHistory();
+    const idMap = new Map<string, string>();
+    const newNodes: CfcNode[] = clipboard.map((n) => {
+      const id = nextId(n.data.blockType);
+      idMap.set(n.id, id);
+      return {
+        ...n,
+        id,
+        selected: true,
+        position: { x: n.position.x + 32, y: n.position.y + 32 },
+        data: { ...n.data, params: { ...n.data.params } },
+      };
+    });
+    // carry internal edges (both ends copied)
+    const internal = get().edges.filter((e) => idMap.has(e.source) && idMap.has(e.target));
+    const newEdges: Edge[] = internal.map((e) => ({
+      ...e,
+      id: `e_${idMap.get(e.source)}.${e.sourceHandle}-${idMap.get(e.target)}.${e.targetHandle}`,
+      source: idMap.get(e.source)!,
+      target: idMap.get(e.target)!,
+    }));
+    const cleared = get().nodes.map((n) => (n.selected ? { ...n, selected: false } : n));
+    set({ nodes: [...cleared, ...newNodes], edges: [...get().edges, ...newEdges] });
+    get().buildSim();
+    get().scheduleSave();
+  },
+
+  duplicateSelection: () => {
+    get().copySelection();
+    get().paste();
+  },
+
+  deleteSelection: () => {
+    const ids = new Set(get().nodes.filter((n) => n.selected).map((n) => n.id));
+    const sel = get().selectedId;
+    if (sel) ids.add(sel);
+    if (!ids.size) return;
+    get().pushHistory();
+    set({
+      nodes: get().nodes.filter((n) => !ids.has(n.id)),
+      edges: get().edges.filter((e) => !ids.has(e.source) && !ids.has(e.target)),
+      selectedId: null,
+    });
+    get().buildSim();
+    get().scheduleSave();
+  },
+
+  scheduleSave: () => {
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      try {
+        localStorage.setItem(AUTOSAVE_KEY, get().serialize());
+      } catch {
+        /* ignore */
+      }
+    }, 500);
+  },
+
+  restore: () => {
+    let json: string | null = null;
+    try {
+      json = localStorage.getItem(AUTOSAVE_KEY);
+    } catch {
+      /* ignore */
+    }
+    if (json) get().load(json);
+    else get().loadSample();
+  },
+
   setActiveLesson: (id) => set({ activeLessonId: id, lessonResults: null }),
 
   startLesson: (id) => {
@@ -260,6 +404,7 @@ export const useChartStore = create<ChartState>((set, get) => ({
       const m = /_(\d+)$/.exec(n.id);
       if (m) nodeCounter = Math.max(nodeCounter, Number(m[1]));
     }
+    historyTag = null;
     set({
       nodes,
       edges,
@@ -270,6 +415,8 @@ export const useChartStore = create<ChartState>((set, get) => ({
       plantState: null,
       activeLessonId: id,
       lessonResults: null,
+      past: [],
+      future: [],
     });
     get().buildSim();
     // If the lesson is graded against a plant, attach it so the learner can watch.
@@ -369,16 +516,21 @@ export const useChartStore = create<ChartState>((set, get) => ({
   warnings: [],
 
   onNodesChange: (changes) => {
+    if (changes.some((c) => c.type === 'remove')) get().pushHistory();
     set({ nodes: applyNodeChanges(changes, get().nodes) as CfcNode[] });
     if (changes.some((c) => c.type === 'remove' || c.type === 'add')) get().buildSim();
+    if (changes.some((c) => c.type !== 'select' && c.type !== 'dimensions')) get().scheduleSave();
   },
 
   onEdgesChange: (changes) => {
+    if (changes.some((c) => c.type === 'remove')) get().pushHistory();
     set({ edges: applyEdgeChanges(changes, get().edges) });
     if (changes.some((c) => c.type === 'remove' || c.type === 'add')) get().buildSim();
+    if (changes.some((c) => c.type !== 'select')) get().scheduleSave();
   },
 
   onConnect: (conn) => {
+    get().pushHistory();
     // Enforce one wire per input pin (a pin can only have one driver).
     const filtered = get().edges.filter(
       (e) => !(e.target === conn.target && e.targetHandle === conn.targetHandle),
@@ -389,11 +541,13 @@ export const useChartStore = create<ChartState>((set, get) => ({
     );
     set({ edges });
     get().buildSim();
+    get().scheduleSave();
   },
 
   addBlock: (blockType, position) => {
     const def = registry[blockType];
     if (!def) return;
+    get().pushHistory();
     const id = nextId(blockType);
     const params: Record<string, Value | string> = {};
     for (const p of def.params ?? []) params[p.id] = p.default;
@@ -406,43 +560,52 @@ export const useChartStore = create<ChartState>((set, get) => ({
     };
     set({ nodes: [...get().nodes, node], selectedId: id });
     get().buildSim();
+    get().scheduleSave();
   },
 
   deleteNode: (id) => {
+    get().pushHistory();
     set({
       nodes: get().nodes.filter((n) => n.id !== id),
       edges: get().edges.filter((e) => e.source !== id && e.target !== id),
       selectedId: get().selectedId === id ? null : get().selectedId,
     });
     get().buildSim();
+    get().scheduleSave();
   },
 
   setSelected: (id) => set({ selectedId: id }),
 
   updateParam: (id, paramId, value) => {
+    get().pushHistory(`param:${id}:${paramId}`);
     set({
       nodes: get().nodes.map((n) =>
         n.id === id ? { ...n, data: { ...n.data, params: { ...n.data.params, [paramId]: value } } } : n,
       ),
     });
     get().sim?.setParam(id, paramId, value);
+    get().scheduleSave();
   },
 
   setSequence: (id, seq) => {
+    get().pushHistory(`seq:${id}`);
     set({
       nodes: get().nodes.map((n) =>
         n.id === id ? { ...n, data: { ...n.data, sequence: seq } } : n,
       ),
     });
     get().buildSim();
+    get().scheduleSave();
   },
 
   setLabel: (id, label) => {
+    get().pushHistory(`label:${id}`);
     set({
       nodes: get().nodes.map((n) =>
         n.id === id ? { ...n, data: { ...n.data, label } } : n,
       ),
     });
+    get().scheduleSave();
   },
 
   buildSim: () => {
@@ -560,7 +723,8 @@ export const useChartStore = create<ChartState>((set, get) => ({
         const m = /_(\d+)$/.exec(n.id);
         if (m) nodeCounter = Math.max(nodeCounter, Number(m[1]));
       }
-      set({ nodes, edges, selectedId: null });
+      historyTag = null;
+      set({ nodes, edges, selectedId: null, past: [], future: [] });
       get().reset();
       get().buildSim();
     } catch (err) {
@@ -575,22 +739,27 @@ export const useChartStore = create<ChartState>((set, get) => ({
       const m = /_(\d+)$/.exec(n.id);
       if (m) nodeCounter = Math.max(nodeCounter, Number(m[1]));
     }
-    set({ nodes, edges, selectedId: null, time: 0, plant: null, plantState: null, history: [] });
+    historyTag = null;
+    set({ nodes, edges, selectedId: null, time: 0, plant: null, plantState: null, history: [], past: [], future: [] });
     get().buildSim();
     get().autoWatchIO();
+    get().scheduleSave();
   },
 
   loadAhuDemo: () => {
     get().pause();
     const { nodes, edges } = buildAhuSample();
-    set({ nodes, edges, selectedId: null, time: 0, history: [] });
+    historyTag = null;
+    set({ nodes, edges, selectedId: null, time: 0, history: [], past: [], future: [] });
     get().buildSim();
     get().setPlantModel('ahu'); // auto-binds by matching labels
     get().autoWatchIO();
+    get().scheduleSave();
   },
 
   clear: () => {
     get().pause();
+    historyTag = null;
     set({
       nodes: [],
       edges: [],
@@ -601,7 +770,10 @@ export const useChartStore = create<ChartState>((set, get) => ({
       history: [],
       plant: null,
       plantState: null,
+      past: [],
+      future: [],
     });
     get().buildSim();
+    get().scheduleSave();
   },
 }));

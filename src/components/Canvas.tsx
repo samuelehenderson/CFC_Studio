@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   Background,
   Controls,
@@ -26,6 +26,40 @@ function Flow() {
   const addBlock = useChartStore((s) => s.addBlock);
   const warnings = useChartStore((s) => s.warnings);
   const theme = useChartStore((s) => s.theme);
+  const beginInteraction = useChartStore((s) => s.beginInteraction);
+
+  // Keyboard: undo/redo, copy/paste/duplicate, delete. Ignored while typing
+  // in an input, and only active on the Editor tab (this component mounts there).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) {
+        return;
+      }
+      const s = useChartStore.getState();
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) s.redo();
+        else s.undo();
+      } else if (mod && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        s.redo();
+      } else if (mod && e.key.toLowerCase() === 'c') {
+        s.copySelection();
+      } else if (mod && e.key.toLowerCase() === 'v') {
+        s.paste();
+      } else if (mod && e.key.toLowerCase() === 'd') {
+        e.preventDefault();
+        s.duplicateSelection();
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        s.deleteSelection();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   const wrapper = useRef<HTMLDivElement>(null);
   const rfRef = useRef<ReactFlowInstance<CfcNode, Edge> | null>(null);
@@ -63,8 +97,10 @@ function Flow() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onNodeDragStart={() => beginInteraction()}
         onNodeClick={(_, n) => setSelected(n.id)}
         onPaneClick={() => setSelected(null)}
+        deleteKeyCode={null}
         onDrop={onDrop}
         onDragOver={(e) => {
           e.preventDefault();

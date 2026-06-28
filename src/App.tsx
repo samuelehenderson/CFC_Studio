@@ -11,10 +11,10 @@ import { useChartStore } from './store/chartStore';
 export function App() {
   const activeTab = useChartStore((s) => s.activeTab);
 
-  // Load the sample chart once so the Editor isn't empty on first run.
+  // Restore the autosaved chart (or the sample on first run).
   useEffect(() => {
     const s = useChartStore.getState();
-    if (s.nodes.length === 0) s.loadSample();
+    if (s.nodes.length === 0) s.restore();
   }, []);
 
   return (
