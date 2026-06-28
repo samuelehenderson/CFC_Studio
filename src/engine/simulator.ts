@@ -205,7 +205,15 @@ export class Simulator {
       });
 
       const stored: Record<string, Value> = {};
-      for (const pin of b.def.outputs) stored[pin.id] = coerce(out[pin.id], pin.type);
+      for (const pin of b.def.outputs) {
+        stored[pin.id] = coerce(out[pin.id], pin.type);
+        // A forced pin overrides the computed value, so downstream blocks
+        // solved later this cycle immediately see the forced value.
+        if (this.forces.size) {
+          const f = this.forces.get(`${b.instance.id}:${pin.id}`);
+          if (f !== undefined) stored[pin.id] = coerce(f, pin.type);
+        }
+      }
       this.outputs[b.instance.id] = stored;
     }
 
@@ -216,6 +224,15 @@ export class Simulator {
   setParam(blockId: string, paramId: string, value: Value | string) {
     const b = this.blocks.find((x) => x.instance.id === blockId);
     if (b) b.instance.params = { ...b.instance.params, [paramId]: value };
+  }
+
+  /** Forced output values (commissioning override): blockId:pinId -> value. */
+  private readonly forces = new Map<string, Value>();
+  setForce(blockId: string, pinId: string, value: Value) {
+    this.forces.set(`${blockId}:${pinId}`, value);
+  }
+  clearForce(blockId: string, pinId: string) {
+    this.forces.delete(`${blockId}:${pinId}`);
   }
 
   /** Current outputs/inputs without advancing the cycle. */

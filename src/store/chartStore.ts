@@ -150,6 +150,11 @@ interface ChartState {
   clearWatch: () => void;
   autoWatchIO: () => void;
 
+  // forced (overridden) output values: `${nodeId}:${pinId}` -> value
+  forces: Record<string, Value>;
+  setForce: (nodeId: string, pinId: string, value: Value) => void;
+  clearForce: (nodeId: string, pinId: string) => void;
+
   // plant
   plant: PlantConfig | null;
   plantState: PlantState | null;
@@ -275,6 +280,7 @@ export const useChartStore = create<ChartState>((set, get) => ({
 
   watch: [],
   history: [],
+  forces: {},
   plant: null,
   plantState: null,
   plantScenario: { oat: 40, heatStuck: false, sensorFail: false },
@@ -647,7 +653,25 @@ export const useChartStore = create<ChartState>((set, get) => ({
   buildSim: () => {
     const { instances, connections } = toModel(get().nodes, get().edges);
     const sim = new Simulator(instances, connections, registry);
+    const nodeIds = new Set(instances.map((i) => i.id));
+    for (const [key, v] of Object.entries(get().forces)) {
+      const sep = key.indexOf(':');
+      const nid = key.slice(0, sep);
+      const pid = key.slice(sep + 1);
+      if (nodeIds.has(nid)) sim.setForce(nid, pid, v);
+    }
     set({ sim, warnings: sim.warnings, live: sim.snapshot() });
+  },
+
+  setForce: (nodeId, pinId, value) => {
+    get().sim?.setForce(nodeId, pinId, value);
+    set({ forces: { ...get().forces, [`${nodeId}:${pinId}`]: value } });
+  },
+  clearForce: (nodeId, pinId) => {
+    get().sim?.clearForce(nodeId, pinId);
+    const next = { ...get().forces };
+    delete next[`${nodeId}:${pinId}`];
+    set({ forces: next });
   },
 
   start: () => {

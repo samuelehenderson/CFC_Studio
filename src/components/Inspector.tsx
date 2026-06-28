@@ -1,7 +1,7 @@
 import { registry } from '../engine/blocks';
 import { useChartStore } from '../store/chartStore';
 import { ProvBadge } from './ProvBadge';
-import type { ParamDef, Value } from '../engine/types';
+import type { ParamDef, PinDef, Value } from '../engine/types';
 
 /** Right-hand inspector: edit the selected block's params, sequence, label,
  *  and watch its live input/output values. */
@@ -13,6 +13,9 @@ export function Inspector() {
   const setSequence = useChartStore((s) => s.setSequence);
   const setLabel = useChartStore((s) => s.setLabel);
   const deleteNode = useChartStore((s) => s.deleteNode);
+  const forces = useChartStore((s) => s.forces);
+  const setForce = useChartStore((s) => s.setForce);
+  const clearForce = useChartStore((s) => s.clearForce);
 
   if (!node || !selectedId) {
     return (
@@ -87,16 +90,65 @@ export function Inspector() {
           </div>
         ))}
         {def.outputs.map((pin) => (
-          <div className="pinrow" key={pin.id}>
-            <span>{pin.name} (out)</span>
-            <span className="v">{fmt(outputs[pin.id], pin.type)}</span>
-          </div>
+          <ForcePin
+            key={pin.id}
+            pin={pin}
+            value={outputs[pin.id]}
+            forced={forces[`${selectedId}:${pin.id}`]}
+            onForce={(v) => setForce(selectedId, pin.id, v)}
+            onRelease={() => clearForce(selectedId, pin.id)}
+          />
         ))}
       </div>
 
       <hr />
       <button onClick={() => deleteNode(selectedId)}>Delete block</button>
     </aside>
+  );
+}
+
+function ForcePin({
+  pin,
+  value,
+  forced,
+  onForce,
+  onRelease,
+}: {
+  pin: PinDef;
+  value: Value | undefined;
+  forced: Value | undefined;
+  onForce: (v: Value) => void;
+  onRelease: () => void;
+}) {
+  const isForced = forced !== undefined;
+  return (
+    <div className={`pinrow${isForced ? ' forced' : ''}`}>
+      <span>{pin.name} (out)</span>
+      <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+        {isForced ? (
+          pin.type === 'BOOL' ? (
+            <input type="checkbox" checked={!!forced} onChange={(e) => onForce(e.target.checked)} style={{ width: 'auto' }} />
+          ) : (
+            <input type="number" step="any" value={Number(forced)} onChange={(e) => onForce(Number(e.target.value))} style={{ width: 64 }} />
+          )
+        ) : (
+          <span className="v">{fmt(value, pin.type)}</span>
+        )}
+        {isForced ? (
+          <button className="force-btn on" title="Release force" onClick={onRelease}>
+            ⊘
+          </button>
+        ) : (
+          <button
+            className="force-btn"
+            title="Force this output to a fixed value"
+            onClick={() => onForce(pin.type === 'BOOL' ? true : Number(value ?? 0))}
+          >
+            ⊙
+          </button>
+        )}
+      </span>
+    </div>
   );
 }
 

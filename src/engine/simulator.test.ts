@@ -115,6 +115,21 @@ describe('feedback designation', () => {
   });
 });
 
+describe('forcing', () => {
+  it('a forced output overrides the computed value and propagates downstream', () => {
+    const sim = new Simulator(
+      [inst('c', 'CONST', { value: 5 }, 10), inst('a', 'ABS_R', {}, 20)],
+      [wire('w', 'c', 'y', 'a', 'in1')],
+      registry,
+    );
+    expect(sim.step(0.1).outputs.a.out).toBe(5);
+    sim.setForce('c', 'y', 99);
+    expect(sim.step(0.1).outputs.a.out).toBe(99); // ABS sees the forced constant same cycle
+    sim.clearForce('c', 'y');
+    expect(sim.step(0.1).outputs.a.out).toBe(5);
+  });
+});
+
 describe('closed loop', () => {
   it('LOOP drives a lagged plant toward setpoint (feedback edge)', () => {
     // setpoint 72 -> LOOP -> valve gain -> +ambient -> PT1 lag -> back to LOOP.x

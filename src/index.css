@@ -406,6 +406,26 @@ input {
 .inspector .pinrow .v {
   color: var(--accent);
 }
+.inspector .pinrow.forced {
+  color: var(--warn);
+}
+.inspector .pinrow.forced .v {
+  color: var(--warn);
+}
+.force-btn {
+  padding: 0 6px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+.force-btn.on {
+  color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 50%, transparent);
+}
+/* forced output value on a node */
+.cfc-node .pin .val.forced {
+  color: var(--warn);
+}
 .empty {
   color: var(--text-dim);
   padding: var(--space-5) var(--space-2);

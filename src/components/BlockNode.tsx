@@ -15,6 +15,7 @@ function formatVal(v: Value | undefined, type: PinDef['type']): string {
 export const BlockNode = memo(({ id, data, selected }: NodeProps<CfcNode>) => {
   const def = registry[data.blockType];
   const live = useChartStore((s) => s.live);
+  const forces = useChartStore((s) => s.forces);
   if (!def) {
     return <div className="cfc-node">Unknown: {data.blockType}</div>;
   }
@@ -52,7 +53,12 @@ export const BlockNode = memo(({ id, data, selected }: NodeProps<CfcNode>) => {
         <div className="pins out">
           {def.outputs.map((pin) => (
             <div className="pin" key={pin.id}>
-              <span className={valClass(outputs[pin.id], pin.type)}>
+              <span
+                className={`${valClass(outputs[pin.id], pin.type)}${
+                  forces[`${id}:${pin.id}`] !== undefined ? ' forced' : ''
+                }`}
+                title={forces[`${id}:${pin.id}`] !== undefined ? 'forced' : undefined}
+              >
                 {formatVal(outputs[pin.id], pin.type)}
               </span>
               <span className="nm">{pin.name}</span>
