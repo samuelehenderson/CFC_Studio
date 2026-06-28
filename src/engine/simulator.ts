@@ -57,6 +57,8 @@ export class Simulator {
   time = 0;
   /** Connection ids that form feedback loops (for UI highlighting). */
   readonly feedbackConnIds = new Set<string>();
+  /** Block ids in final execution (solve) order. */
+  orderIds: string[] = [];
   /** Algebraic loops through stateless blocks — surfaced as warnings. */
   readonly warnings: string[] = [];
 
@@ -122,8 +124,11 @@ export class Simulator {
     for (const c of connections) {
       if (!byId.has(c.source) || !byId.has(c.target)) continue;
       const fromStateful = byId.get(c.source)!.def.stateful;
+      const targetFbStart = byId.get(c.target)!.instance.feedbackStart;
       const forward = seqIndex.get(c.source)! < seqIndex.get(c.target)!;
-      if (fromStateful || !forward) {
+      // A wire into a designated feedback-start block, out of a stateful block,
+      // or running backwards vs sequence, carries the previous cycle's value.
+      if (targetFbStart || fromStateful || !forward) {
         this.feedbackKeys.add(edgeKey(c.source, c.sourcePin, c.target, c.targetPin));
         this.feedbackConnIds.add(c.id);
         continue;
@@ -165,6 +170,7 @@ export class Simulator {
     }
 
     this.order = result;
+    this.orderIds = result.map((b) => b.instance.id);
   }
 
   /** Run one solver cycle. Returns the freshly computed values. */

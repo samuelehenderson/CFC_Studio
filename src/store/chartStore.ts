@@ -31,6 +31,7 @@ export interface CfcNodeData extends Record<string, unknown> {
   params: Record<string, Value | string>;
   sequence: number;
   label?: string;
+  feedbackStart?: boolean;
 }
 
 export type CfcNode = Node<CfcNodeData>;
@@ -198,6 +199,10 @@ interface ChartState {
   updateParam: (id: string, paramId: string, value: Value | string) => void;
   setSequence: (id: string, seq: number) => void;
   setLabel: (id: string, label: string) => void;
+  setFeedbackStart: (id: string, value: boolean) => void;
+  reorderSequence: (orderedIds: string[]) => void;
+  showSequence: boolean;
+  toggleSequence: () => void;
 
   // simulation control
   buildSim: () => void;
@@ -230,6 +235,7 @@ function toModel(nodes: CfcNode[], edges: Edge[]): {
       params: n.data.params ?? {},
       sequence: n.data.sequence ?? 0,
       label: n.data.label,
+      feedbackStart: n.data.feedbackStart,
     }));
   const connections: Connection[] = edges.map((e) => ({
     id: e.id,
@@ -611,6 +617,32 @@ export const useChartStore = create<ChartState>((set, get) => ({
     });
     get().scheduleSave();
   },
+
+  setFeedbackStart: (id, value) => {
+    get().pushHistory();
+    set({
+      nodes: get().nodes.map((n) =>
+        n.id === id ? { ...n, data: { ...n.data, feedbackStart: value } } : n,
+      ),
+    });
+    get().buildSim();
+    get().scheduleSave();
+  },
+
+  reorderSequence: (orderedIds) => {
+    get().pushHistory();
+    const seqOf = new Map(orderedIds.map((id, i) => [id, (i + 1) * 10]));
+    set({
+      nodes: get().nodes.map((n) =>
+        seqOf.has(n.id) ? { ...n, data: { ...n.data, sequence: seqOf.get(n.id)! } } : n,
+      ),
+    });
+    get().buildSim();
+    get().scheduleSave();
+  },
+
+  showSequence: false,
+  toggleSequence: () => set({ showSequence: !get().showSequence }),
 
   buildSim: () => {
     const { instances, connections } = toModel(get().nodes, get().edges);

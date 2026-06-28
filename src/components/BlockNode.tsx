@@ -27,7 +27,9 @@ export const BlockNode = memo(({ id, data, selected }: NodeProps<CfcNode>) => {
     <div className={`cfc-node${selected ? ' selected' : ''}`}>
       <div className="hd" style={{ background: header }}>
         <span>{data.label || def.name}</span>
-        <span className="seq" title="Execution sequence">#{data.sequence}</span>
+        <span className="seq" title="Execution sequence">
+          {data.feedbackStart && <span title="Feedback start (reads previous cycle)">⟲ </span>}#{data.sequence}
+        </span>
       </div>
       <div className="body">
         <div className="pins in">

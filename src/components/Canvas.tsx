@@ -10,6 +10,7 @@ import {
   useReactFlow,
 } from '@xyflow/react';
 import { BlockNode } from './BlockNode';
+import { RunSequencePanel } from './RunSequencePanel';
 import { useChartStore, type CfcNode } from '../store/chartStore';
 import { registry } from '../engine/blocks';
 
@@ -25,6 +26,7 @@ function Flow() {
   const setSelected = useChartStore((s) => s.setSelected);
   const addBlock = useChartStore((s) => s.addBlock);
   const theme = useChartStore((s) => s.theme);
+  const showSequence = useChartStore((s) => s.showSequence);
   const beginInteraction = useChartStore((s) => s.beginInteraction);
 
   // Keyboard: undo/redo, copy/paste/duplicate, delete. Ignored while typing
@@ -118,6 +120,7 @@ function Flow() {
           maskColor="rgba(15,23,42,0.6)"
         />
       </ReactFlow>
+      {showSequence && <RunSequencePanel />}
     </div>
   );
 }

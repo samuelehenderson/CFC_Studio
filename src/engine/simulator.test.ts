@@ -97,6 +97,24 @@ describe('stateful blocks', () => {
   });
 });
 
+describe('feedback designation', () => {
+  it('feedbackStart forces a block to read previous-cycle inputs', () => {
+    const mk = (fb: boolean) =>
+      new Simulator(
+        [inst('c', 'CONST', { value: 5 }, 10), { ...inst('a', 'ABS_R', {}, 20), feedbackStart: fb }],
+        [wire('w', 'c', 'y', 'a', 'in1')],
+        registry,
+      );
+    // Normal: forward edge, ABS sees the constant this cycle.
+    expect(mk(false).step(0.1).outputs.a.out).toBe(5);
+    // feedbackStart: the wire is demoted to feedback, so ABS lags one cycle.
+    const fb = mk(true);
+    expect(fb.feedbackConnIds.has('w')).toBe(true);
+    expect(fb.step(0.1).outputs.a.out).toBe(0); // reads previous (0)
+    expect(fb.step(0.1).outputs.a.out).toBe(5); // now sees the constant
+  });
+});
+
 describe('closed loop', () => {
   it('LOOP drives a lagged plant toward setpoint (feedback edge)', () => {
     // setpoint 72 -> LOOP -> valve gain -> +ambient -> PT1 lag -> back to LOOP.x

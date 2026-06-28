@@ -16,6 +16,8 @@ export function Toolbar() {
   const clear = useChartStore((s) => s.clear);
   const undo = useChartStore((s) => s.undo);
   const redo = useChartStore((s) => s.redo);
+  const showSequence = useChartStore((s) => s.showSequence);
+  const toggleSequence = useChartStore((s) => s.toggleSequence);
   const canUndo = useChartStore((s) => s.past.length > 0);
   const canRedo = useChartStore((s) => s.future.length > 0);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -68,6 +70,14 @@ export function Toolbar() {
         <option value={5}>5×</option>
         <option value={20}>20×</option>
       </select>
+
+      <button
+        onClick={toggleSequence}
+        title="Run-sequence editor"
+        style={showSequence ? { borderColor: 'var(--accent)', color: 'var(--accent)' } : undefined}
+      >
+        ≣ Sequence
+      </button>
 
       <div className="spacer" />
       <span className="clock">t = {time.toFixed(1)} s</span>

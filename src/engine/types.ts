@@ -140,6 +140,12 @@ export interface BlockInstance {
   sequence: number;
   /** Optional user label shown on the node. */
   label?: string;
+  /**
+   * "Set Start of Feedback": when true, all of this block's incoming wires are
+   * treated as feedback (previous-cycle values), deterministically breaking a
+   * loop at this block — the engineer's explicit choice, as in real CFC.
+   */
+  feedbackStart?: boolean;
 }
 
 /** A wire from one block's output pin to another block's input pin. */
