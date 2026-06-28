@@ -63,4 +63,46 @@ describe('behavioral auto-checker', () => {
       expect(c.test(runChart(ninputs, einputs, c.run)), c.label).toBe(true);
     }
   });
+
+  it('alarm-latch lesson is solvable (CMP_R + SR_FF)', () => {
+    const lesson = findLesson('alarm-latch')!;
+    const nodes = [
+      n('t', 'AI', 'Temp', { value: 70 }),
+      n('hi', 'CONST', 'Hi Limit', { value: 85 }),
+      n('rst', 'BI', 'Reset', { value: false }),
+      n('al', 'BO', 'Alarm'),
+      n('cmp', 'CMP_R', 'cmp'),
+      n('sr', 'SR_FF', 'sr'),
+    ] as NodeInput[];
+    const edges = [
+      e('t', 'y', 'cmp', 'in1'),
+      e('hi', 'y', 'cmp', 'in2'),
+      e('cmp', 'gt', 'sr', 'set'),
+      e('rst', 'y', 'sr', 'reset'),
+      e('sr', 'q', 'al', 'x'),
+    ] as EdgeInput[];
+    for (const c of lesson.checks) {
+      expect(c.test(runChart(nodes, edges, c.run)), c.label).toBe(true);
+    }
+  });
+
+  it('count-to-start lesson is solvable (CTU)', () => {
+    const lesson = findLesson('count-to-start')!;
+    const nodes = [
+      n('req', 'BI', 'Request', { value: false }),
+      n('rst', 'BI', 'Reset', { value: false }),
+      n('pv', 'CONST', 'Stages', { value: 3 }),
+      n('en', 'BO', 'Enabled'),
+      n('ctu', 'CTU', 'ctu'),
+    ] as NodeInput[];
+    const edges = [
+      e('req', 'y', 'ctu', 'cu'),
+      e('rst', 'y', 'ctu', 'reset'),
+      e('pv', 'y', 'ctu', 'pv'),
+      e('ctu', 'q', 'en', 'x'),
+    ] as EdgeInput[];
+    for (const c of lesson.checks) {
+      expect(c.test(runChart(nodes, edges, c.run)), c.label).toBe(true);
+    }
+  });
 });

@@ -181,6 +181,139 @@ export const modules: Module[] = [
           },
         ],
       },
+      {
+        id: 'alarm-latch',
+        title: 'Latch a fault',
+        blurb: 'Hold a high-temperature alarm until it is acknowledged.',
+        objective: 'Use a comparator and an SR (set-dominant) latch.',
+        instructions: [
+          'Energize the Alarm when Temp rises above the Hi Limit, and keep it latched ON even after Temp falls back — until Reset is pressed.',
+          'Add a CMP_R and an SR_FF (set-dominant flip-flop).',
+          'Wire Temp → CMP_R.IN1, Hi Limit → CMP_R.IN2, then CMP_R.GT → SR_FF.S1. Wire Reset → SR_FF.R and SR_FF.Q → Alarm.',
+          'Press “Check my work”.',
+        ],
+        hints: [
+          'CMP_R.GT is TRUE while Temp > Hi Limit; that should SET the latch.',
+          'An SR latch holds its output after the set input clears — that’s what makes the alarm “stick”.',
+          'Temp → CMP_R.IN1; Hi Limit → CMP_R.IN2; CMP_R.GT → SR_FF.S1; Reset → SR_FF.R; SR_FF.Q → Alarm.',
+        ],
+        successText: 'Latches turn momentary faults into alarms that demand acknowledgement — essential for safeties.',
+        starter: () => ({
+          nodes: [
+            node('t', 'AI', 'Temp', 60, 70, 10, { value: 70, units: '°F' }),
+            node('hi', 'CONST', 'Hi Limit', 60, 210, 20, { value: 85 }),
+            node('rst', 'BI', 'Reset', 60, 340, 30, { value: false }),
+            node('al', 'BO', 'Alarm', 560, 180, 50),
+          ],
+          edges: [],
+        }),
+        checks: [
+          {
+            id: 'on-high',
+            label: 'Alarm ON when Temp exceeds limit',
+            run: { duration: 4, stimulus: [{ t: 0, label: 'Temp', value: 90 }] },
+            test: (r) => r.valueAt('Alarm', 'y', 3) > 0.5,
+          },
+          {
+            id: 'stays-latched',
+            label: 'Alarm stays latched after Temp falls',
+            run: { duration: 6, stimulus: [{ t: 0, label: 'Temp', value: 90 }, { t: 2, label: 'Temp', value: 70 }] },
+            test: (r) => r.valueAt('Alarm', 'y', 5) > 0.5,
+          },
+          {
+            id: 'clears-on-reset',
+            label: 'Reset clears the alarm',
+            run: {
+              duration: 7,
+              stimulus: [
+                { t: 0, label: 'Temp', value: 90 },
+                { t: 2, label: 'Temp', value: 70 },
+                { t: 3, label: 'Reset', value: true },
+              ],
+            },
+            test: (r) => r.valueAt('Alarm', 'y', 6) < 0.5,
+          },
+        ],
+      },
+      {
+        id: 'count-to-start',
+        title: 'Count to start',
+        blurb: 'Enable the system after three start requests.',
+        objective: 'Use an up-counter (CTU) with a preset.',
+        instructions: [
+          'After Request has been pressed 3 times, turn on Enabled. Reset clears the count.',
+          'Add a CTU (count up). Wire Request → CU, Reset → R, and the Stages constant (3) → PV.',
+          'Wire CTU.Q → Enabled. Q goes TRUE when the count reaches PV.',
+          'Press “Check my work” — the checker pulses Request for you.',
+        ],
+        hints: [
+          'CTU increments CV on each rising edge of CU; Q is TRUE once CV ≥ PV.',
+          'Drive PV from the Stages constant (3) so the threshold is three presses.',
+          'Request → CTU.CU; Reset → CTU.R; Stages → CTU.PV; CTU.Q → Enabled.',
+        ],
+        successText: 'Counters stage equipment, debounce requests, and track events across scans.',
+        starter: () => ({
+          nodes: [
+            node('req', 'BI', 'Request', 60, 70, 10, { value: false }),
+            node('rst', 'BI', 'Reset', 60, 210, 20, { value: false }),
+            node('pv', 'CONST', 'Stages', 60, 340, 30, { value: 3 }),
+            node('en', 'BO', 'Enabled', 560, 180, 50),
+          ],
+          edges: [],
+        }),
+        checks: [
+          {
+            id: 'enables-after-3',
+            label: 'Enabled after 3 requests',
+            run: {
+              duration: 5,
+              dt: 0.25,
+              stimulus: [
+                { t: 0, label: 'Request', value: true },
+                { t: 0.5, label: 'Request', value: false },
+                { t: 1, label: 'Request', value: true },
+                { t: 1.5, label: 'Request', value: false },
+                { t: 2, label: 'Request', value: true },
+                { t: 2.5, label: 'Request', value: false },
+              ],
+            },
+            test: (r) => r.valueAt('Enabled', 'y', 4) > 0.5,
+          },
+          {
+            id: 'not-after-2',
+            label: 'Not enabled after only 2 requests',
+            run: {
+              duration: 5,
+              dt: 0.25,
+              stimulus: [
+                { t: 0, label: 'Request', value: true },
+                { t: 0.5, label: 'Request', value: false },
+                { t: 1, label: 'Request', value: true },
+                { t: 1.5, label: 'Request', value: false },
+              ],
+            },
+            test: (r) => r.valueAt('Enabled', 'y', 4) < 0.5,
+          },
+          {
+            id: 'reset-clears',
+            label: 'Reset clears the count',
+            run: {
+              duration: 6,
+              dt: 0.25,
+              stimulus: [
+                { t: 0, label: 'Request', value: true },
+                { t: 0.5, label: 'Request', value: false },
+                { t: 1, label: 'Request', value: true },
+                { t: 1.5, label: 'Request', value: false },
+                { t: 2, label: 'Request', value: true },
+                { t: 2.5, label: 'Request', value: false },
+                { t: 3, label: 'Reset', value: true },
+              ],
+            },
+            test: (r) => r.valueAt('Enabled', 'y', 5) < 0.5,
+          },
+        ],
+      },
     ],
   },
   {
