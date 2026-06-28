@@ -23,6 +23,8 @@ export interface Lesson {
   title: string;
   blurb: string;
   objective: string;
+  /** Optional PPCL snippet to reproduce in CFC (PPCL migration exercises). */
+  ppcl?: string;
   instructions: string[];
   hints: string[];
   successText: string;
@@ -415,6 +417,103 @@ export const modules: Module[] = [
     ],
   },
 ];
+
+// ---- Module 3: PPCL → CFC migration exercises ----
+modules.push({
+  id: 'm3',
+  title: 'Module 3 · PPCL Migration',
+  lessons: [
+    {
+      id: 'ppcl-economizer',
+      title: 'Migrate: economizer',
+      blurb: 'Translate an economizer IF/THEN to CFC.',
+      objective: 'Turn PPCL branching into a comparator feeding a selector.',
+      ppcl: `C  Economizer damper position
+10 IF ("OAT" .LT. "RAT") THEN "OAD" = 100
+20 IF ("OAT" .GE. "RAT") THEN "OAD" = 20`,
+      instructions: [
+        'Reproduce this PPCL in CFC: drive the OA Damper to 100% when OAT is below RAT, otherwise 20%.',
+        'Add a CMP_R and a SEL_R. Wire OAT → CMP_R.IN1 and RAT → CMP_R.IN2.',
+        'Wire Min OA (20) → SEL_R.IN0, Full OA (100) → SEL_R.IN1, CMP_R.LT → SEL_R.K, and SEL_R.OUT → OA Damper.',
+        'Press “Check my work”.',
+      ],
+      hints: [
+        'An IF/THEN with two outcomes is a SELECT: the condition picks IN1 (true) or IN0 (false).',
+        'The condition is OAT < RAT, so use the CMP_R.LT output as the selector K.',
+        'Min OA → SEL_R.IN0; Full OA → SEL_R.IN1; CMP_R.LT → SEL_R.K; SEL_R.OUT → OA Damper.',
+      ],
+      successText: 'PPCL IF/THEN branching becomes a comparator feeding a selector — declarative, no jumps.',
+      starter: () => ({
+        nodes: [
+          node('oat', 'AI', 'OAT', 60, 70, 10, { value: 50, units: '°F' }),
+          node('rat', 'AI', 'RAT', 60, 200, 20, { value: 72, units: '°F' }),
+          node('lo', 'CONST', 'Min OA', 60, 330, 30, { value: 20 }),
+          node('hiv', 'CONST', 'Full OA', 60, 430, 40, { value: 100 }),
+          node('oad', 'AO', 'OA Damper', 640, 180, 60),
+        ],
+        edges: [],
+      }),
+      checks: [
+        {
+          id: 'econ-open',
+          label: 'Damper 100% when OAT < RAT',
+          run: { duration: 4, stimulus: [{ t: 0, label: 'OAT', value: 40 }, { t: 0, label: 'RAT', value: 72 }] },
+          test: (r) => Math.abs(r.final('OA Damper', 'y') - 100) < 5,
+        },
+        {
+          id: 'econ-min',
+          label: 'Damper 20% when OAT ≥ RAT',
+          run: { duration: 4, stimulus: [{ t: 0, label: 'OAT', value: 80 }, { t: 0, label: 'RAT', value: 72 }] },
+          test: (r) => Math.abs(r.final('OA Damper', 'y') - 20) < 5,
+        },
+      ],
+    },
+    {
+      id: 'ppcl-hw-reset',
+      title: 'Migrate: hot-water reset',
+      blurb: 'Translate an arithmetic reset schedule to CFC.',
+      objective: 'Map a PPCL arithmetic assignment to a chain of math blocks.',
+      ppcl: `C  Hot-water supply setpoint reset from OAT
+10 "HWSP" = 180 - (("OAT" - 20) * 1.5)`,
+      instructions: [
+        'Build the CFC for: HWSP = 180 − ((OAT − 20) × 1.5).',
+        'Use two SUB_R and one MUL_R with the provided constants.',
+        'Chain: SUB_R(OAT − Design 20) → MUL_R(× Gain 1.5) → SUB_R(Max 180 − result) → HW Setpoint.',
+        'Press “Check my work”.',
+      ],
+      hints: [
+        'Work inside-out: first OAT − 20, then × 1.5, then 180 − that.',
+        'SUB_R computes IN1 − IN2, so for “180 − x” wire Max(180) to IN1 and x to IN2.',
+        'SUB_R(OAT, Design) → MUL_R(·, Gain) → SUB_R(Max, ·) → HW Setpoint.',
+      ],
+      successText: 'An arithmetic assignment unfolds into a small block chain — order of operations becomes the wiring.',
+      starter: () => ({
+        nodes: [
+          node('oat', 'AI', 'OAT', 60, 70, 10, { value: 50, units: '°F' }),
+          node('dz', 'CONST', 'Design', 60, 200, 20, { value: 20 }),
+          node('g', 'CONST', 'Gain', 60, 300, 30, { value: 1.5 }),
+          node('mx', 'CONST', 'Max', 60, 400, 40, { value: 180 }),
+          node('sp', 'AO', 'HW Setpoint', 660, 200, 80),
+        ],
+        edges: [],
+      }),
+      checks: [
+        {
+          id: 'hw-20',
+          label: 'HWSP = 180°F at OAT 20°F',
+          run: { duration: 4, stimulus: [{ t: 0, label: 'OAT', value: 20 }] },
+          test: (r) => Math.abs(r.final('HW Setpoint', 'y') - 180) < 2,
+        },
+        {
+          id: 'hw-60',
+          label: 'HWSP = 120°F at OAT 60°F',
+          run: { duration: 4, stimulus: [{ t: 0, label: 'OAT', value: 60 }] },
+          test: (r) => Math.abs(r.final('HW Setpoint', 'y') - 120) < 2,
+        },
+      ],
+    },
+  ],
+});
 
 export function findLesson(id: string): Lesson | undefined {
   for (const m of modules) {

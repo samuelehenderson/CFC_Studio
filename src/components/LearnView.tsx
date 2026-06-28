@@ -80,6 +80,13 @@ function LessonDetail({ lessonId }: { lessonId: string }) {
       </h2>
       <p className="muted" style={{ color: 'var(--text-dim)' }}>{lesson.objective}</p>
 
+      {lesson.ppcl && (
+        <div className="lesson-ppcl">
+          <div className="ppcl-tag">PPCL to reproduce</div>
+          <pre>{lesson.ppcl}</pre>
+        </div>
+      )}
+
       <div className="lesson-actions">
         <button
           className="primary"

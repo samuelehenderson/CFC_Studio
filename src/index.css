@@ -922,6 +922,32 @@ input {
   color: var(--text-dim);
   font-size: 13px;
 }
+.lesson-ppcl {
+  margin: var(--space-3) 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.lesson-ppcl .ppcl-tag {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  background: var(--panel);
+  padding: 4px var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+.lesson-ppcl pre {
+  margin: 0;
+  padding: var(--space-3);
+  background: var(--canvas-bg);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text);
+  overflow-x: auto;
+  white-space: pre;
+}
 
 /* ---------- Translate ---------- */
 .translate-shell {

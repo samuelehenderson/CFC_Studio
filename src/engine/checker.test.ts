@@ -105,4 +105,55 @@ describe('behavioral auto-checker', () => {
       expect(c.test(runChart(nodes, edges, c.run)), c.label).toBe(true);
     }
   });
+
+  it('PPCL economizer exercise is solvable (CMP_R + SEL_R)', () => {
+    const lesson = findLesson('ppcl-economizer')!;
+    const nodes = [
+      n('oat', 'AI', 'OAT', { value: 50 }),
+      n('rat', 'AI', 'RAT', { value: 72 }),
+      n('lo', 'CONST', 'Min OA', { value: 20 }),
+      n('hiv', 'CONST', 'Full OA', { value: 100 }),
+      n('oad', 'AO', 'OA Damper'),
+      n('cmp', 'CMP_R', 'cmp'),
+      n('sel', 'SEL_R', 'sel'),
+    ] as NodeInput[];
+    const edges = [
+      e('oat', 'y', 'cmp', 'in1'),
+      e('rat', 'y', 'cmp', 'in2'),
+      e('lo', 'y', 'sel', 'in0'),
+      e('hiv', 'y', 'sel', 'in1'),
+      e('cmp', 'lt', 'sel', 'k'),
+      e('sel', 'out', 'oad', 'x'),
+    ] as EdgeInput[];
+    for (const c of lesson.checks) {
+      expect(c.test(runChart(nodes, edges, c.run)), c.label).toBe(true);
+    }
+  });
+
+  it('PPCL hot-water reset exercise is solvable (SUB_R/MUL_R chain)', () => {
+    const lesson = findLesson('ppcl-hw-reset')!;
+    // HWSP = 180 - ((OAT - 20) * 1.5)
+    const nodes = [
+      n('oat', 'AI', 'OAT', { value: 50 }),
+      n('dz', 'CONST', 'Design', { value: 20 }),
+      n('g', 'CONST', 'Gain', { value: 1.5 }),
+      n('mx', 'CONST', 'Max', { value: 180 }),
+      n('sp', 'AO', 'HW Setpoint'),
+      n('s1', 'SUB_R', 's1'),
+      n('m1', 'MUL_R', 'm1'),
+      n('s2', 'SUB_R', 's2'),
+    ] as NodeInput[];
+    const edges = [
+      e('oat', 'y', 's1', 'in1'),
+      e('dz', 'y', 's1', 'in2'),
+      e('s1', 'out', 'm1', 'in1'),
+      e('g', 'y', 'm1', 'in2'),
+      e('mx', 'y', 's2', 'in1'),
+      e('m1', 'out', 's2', 'in2'),
+      e('s2', 'out', 'sp', 'x'),
+    ] as EdgeInput[];
+    for (const c of lesson.checks) {
+      expect(c.test(runChart(nodes, edges, c.run)), c.label).toBe(true);
+    }
+  });
 });

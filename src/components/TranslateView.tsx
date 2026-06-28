@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { translatePpcl, PPCL_SAMPLES, type MapStatus } from '../engine/ppcl/translate';
+import { useChartStore } from '../store/chartStore';
 
 const STATUS_LABEL: Record<MapStatus, string> = {
   ok: 'maps cleanly',
@@ -12,6 +13,13 @@ const STATUS_LABEL: Record<MapStatus, string> = {
 export function TranslateView() {
   const [src, setSrc] = useState(PPCL_SAMPLES[0].code);
   const rows = useMemo(() => translatePpcl(src), [src]);
+  const setTab = useChartStore((s) => s.setTab);
+  const setActiveLesson = useChartStore((s) => s.setActiveLesson);
+
+  const practice = () => {
+    setActiveLesson('ppcl-economizer');
+    setTab('learn');
+  };
 
   const stmts = rows.filter((r) => r.status !== 'comment');
   const clean = stmts.filter((r) => r.status === 'ok').length;
@@ -26,6 +34,9 @@ export function TranslateView() {
             {stmts.length} statements · {clean} map cleanly · {manual} need rework
           </span>
           <div style={{ flex: 1 }} />
+          <button className="primary" onClick={practice} title="Build these in a graded Learn exercise">
+            Practice in Learn →
+          </button>
           <label style={{ color: 'var(--text-dim)', fontSize: 12 }}>Example</label>
           <select
             value=""
