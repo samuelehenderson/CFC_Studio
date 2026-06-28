@@ -84,10 +84,13 @@ export function TranslateView() {
         </div>
 
         <div className="translate-foot source-note">
-          A teaching aid, not an automated transpiler — Siemens migration is manual. Coverage comes
-          from the PPCL→CFC map in <code>docs/CFC-reference.md §5</code> and expands as the rule set
-          grows from a real APOGEE PPCL manual. Graded "now you build it" exercises (reusing the
-          Learn auto-checker) are the next step.
+          A teaching aid, not an automated transpiler — Siemens migration is manual. Construct
+          coverage follows <code>docs/reference/ppcl-reference.md</code> (reconciled against the
+          official APOGEE PPCL User's Manual): quoted dotted point names, <code>DEFINE</code>/
+          <code>%X%</code> macros, the real <code>LOOP(type,pv,cv,sp,pg,ig,dg,st,bias,lo,hi,0)</code>
+          signature (Kp = pg/1000, 0 = direct / 128 = reverse), and the scan model where a GOTO back
+          to the top is just the main loop — CFC re-solves the whole chart every cycle. Graded "now
+          you build it" exercises (reusing the Learn auto-checker) are the next step.
         </div>
       </div>
     </div>
