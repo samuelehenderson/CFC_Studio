@@ -330,7 +330,7 @@ input {
   background: var(--panel-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  min-width: 120px;
+  min-width: 168px;
   font-size: 12px;
   box-shadow: var(--shadow);
 }
@@ -355,8 +355,8 @@ input {
 .cfc-node .body {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 2px 10px;
-  padding: 6px var(--space-2);
+  gap: 2px 16px;
+  padding: 6px 4px;
 }
 .cfc-node .pins {
   display: flex;
@@ -370,20 +370,31 @@ input {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   height: 16px;
+}
+/* Keep pin text clear of the connection handles sitting on the node edges. */
+.cfc-node .pins.in .pin {
+  padding-left: 10px;
 }
 .cfc-node .pins.out .pin {
   justify-content: flex-end;
+  padding-right: 10px;
 }
 .cfc-node .pin .nm {
   color: var(--text-dim);
+  white-space: nowrap;
+}
+/* Push the input value to the right edge of its column for readability. */
+.cfc-node .pins.in .pin .val {
+  margin-left: auto;
 }
 .cfc-node .pin .val {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   color: var(--accent);
   font-weight: 600;
+  white-space: nowrap;
 }
 .cfc-node .pin .val.bool-true {
   color: var(--good);
