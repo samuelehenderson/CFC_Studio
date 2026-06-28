@@ -865,6 +865,47 @@ input {
   color: var(--text-dim);
   font-size: 10px;
 }
+.scope-svg .scope-cursor {
+  stroke: var(--text-dim);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+.scope-metrics {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: var(--space-3);
+  font-size: 12px;
+}
+.scope-metrics th,
+.scope-metrics td {
+  text-align: left;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.scope-metrics th {
+  color: var(--text-dim);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: 600;
+}
+.scope-metrics td.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.scope-metrics .sw {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  margin-right: 6px;
+}
+.scope-metrics .muted {
+  color: var(--text-dim);
+}
 
 /* ---------- Plant ---------- */
 .plant-layout {

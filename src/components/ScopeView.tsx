@@ -4,7 +4,10 @@ import { registry } from '../engine/blocks';
 
 const WINDOWS = [30, 60, 120, 300];
 
-/** Scope tab: a live oscilloscope + data recorder for watched pins. */
+type Sample = { t: number; v: Record<string, number> };
+
+/** Scope tab: a live oscilloscope + data recorder with a hover cursor and
+ *  per-signal control metrics. */
 export function ScopeView() {
   const watch = useChartStore((s) => s.watch);
   const history = useChartStore((s) => s.history);
@@ -15,11 +18,12 @@ export function ScopeView() {
   const clearWatch = useChartStore((s) => s.clearWatch);
   const autoWatchIO = useChartStore((s) => s.autoWatchIO);
   const [windowSec, setWindowSec] = useState(60);
+  const [cursorT, setCursorT] = useState<number | null>(null);
+  const [showMetrics, setShowMetrics] = useState(false);
 
   const analog = watch.filter((w) => w.kind === 'analog');
   const binary = watch.filter((w) => w.kind === 'binary');
 
-  // Options to add: every output pin of every block not already watched.
   const options = useMemo(() => {
     const out: { id: string; nodeId: string; pinId: string; label: string; kind: 'analog' | 'binary' }[] = [];
     for (const n of nodes) {
@@ -40,7 +44,52 @@ export function ScopeView() {
     return out;
   }, [nodes, watch]);
 
-  const last = history[history.length - 1];
+  const last = history[history.length - 1] ?? null;
+
+  // Sample nearest the hover cursor (snaps the readout to real data).
+  const cursorSample = useMemo<Sample | null>(() => {
+    if (cursorT == null || !history.length) return null;
+    let best = history[0];
+    for (const s of history) if (Math.abs(s.t - cursorT) < Math.abs(best.t - cursorT)) best = s;
+    return best;
+  }, [cursorT, history]);
+  const readout = cursorSample ?? last;
+
+  // Per-analog-signal metrics over the whole recorded run.
+  const metrics = useMemo(
+    () =>
+      analog.map((a) => {
+        const ys: number[] = [];
+        for (const s of history) {
+          const v = s.v[a.id];
+          if (v !== undefined && !Number.isNaN(v)) ys.push(v);
+        }
+        if (ys.length < 2) return { id: a.id, label: a.label, color: a.color, empty: true } as const;
+        const final = ys[ys.length - 1];
+        const min = Math.min(...ys);
+        const max = Math.max(...ys);
+        const band = Math.max((max - min) * 0.02, Math.abs(final) * 0.02, 0.01);
+        let lastOut = -1;
+        for (let i = 0; i < history.length; i++) {
+          const v = history[i].v[a.id];
+          if (v !== undefined && Math.abs(v - final) > band) lastOut = i;
+        }
+        const settled =
+          lastOut < 0 ? 0 : lastOut < history.length - 1 ? history[lastOut + 1].t : null;
+        return {
+          id: a.id,
+          label: a.label,
+          color: a.color,
+          empty: false,
+          final,
+          min,
+          max,
+          overshoot: Math.max(0, max - final),
+          settled,
+        } as const;
+      }),
+    [analog, history],
+  );
 
   return (
     <div className="tabview" style={{ padding: 0 }}>
@@ -49,8 +98,16 @@ export function ScopeView() {
           <strong style={{ fontSize: 14 }}>Scope</strong>
           <span className="muted" style={{ color: 'var(--text-dim)', fontSize: 12 }}>
             {watch.length} signals · t = {time.toFixed(1)}s
+            {cursorSample && <> · cursor @ {cursorSample.t.toFixed(1)}s</>}
           </span>
           <div className="spacer" style={{ flex: 1 }} />
+          <button
+            onClick={() => setShowMetrics((m) => !m)}
+            style={showMetrics ? { borderColor: 'var(--accent)', color: 'var(--accent)' } : undefined}
+            title="Show control metrics"
+          >
+            Metrics
+          </button>
           <label style={{ color: 'var(--text-dim)', fontSize: 12 }}>Window</label>
           <select value={windowSec} onChange={(e) => setWindowSec(Number(e.target.value))}>
             {WINDOWS.map((w) => (
@@ -89,20 +146,62 @@ export function ScopeView() {
             Add a signal above, or click <b>Auto: I/O points</b>, then press Run on the Editor tab.
           </div>
         ) : (
-          <div style={{ flex: 1, minHeight: 0, padding: '8px 16px 16px' }}>
-            <Chart watch={watch} history={history} windowSec={windowSec} currentTime={time} />
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '8px 16px 16px' }}>
+            <Chart
+              watch={watch}
+              history={history}
+              windowSec={windowSec}
+              currentTime={time}
+              cursor={cursorSample}
+              onCursor={setCursorT}
+            />
             <div className="scope-legend">
               {[...analog, ...binary].map((w) => (
                 <button key={w.id} className="legend-item" onClick={() => removeWatch(w.id)} title="Remove">
                   <span className="sw" style={{ background: w.color }} />
                   <span>{w.label}</span>
                   <span className="val" style={{ color: w.color }}>
-                    {last ? fmt(last.v[w.id], w.kind) : '–'}
+                    {readout ? fmt(readout.v[w.id], w.kind) : '–'}
                   </span>
                   <span className="x">✕</span>
                 </button>
               ))}
             </div>
+
+            {showMetrics && (
+              <table className="scope-metrics">
+                <thead>
+                  <tr>
+                    <th>Signal</th>
+                    <th>Final</th>
+                    <th>Min</th>
+                    <th>Max</th>
+                    <th>Overshoot</th>
+                    <th>Settled</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {metrics.map((m) => (
+                    <tr key={m.id}>
+                      <td>
+                        <span className="sw" style={{ background: m.color }} /> {m.label}
+                      </td>
+                      {m.empty ? (
+                        <td colSpan={5} className="muted">run the simulation to collect data</td>
+                      ) : (
+                        <>
+                          <td className="num">{m.final.toFixed(2)}</td>
+                          <td className="num">{m.min.toFixed(2)}</td>
+                          <td className="num">{m.max.toFixed(2)}</td>
+                          <td className="num">{m.overshoot.toFixed(2)}</td>
+                          <td className="num">{m.settled == null ? '—' : `${m.settled.toFixed(1)}s`}</td>
+                        </>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         )}
       </div>
@@ -115,11 +214,15 @@ function Chart({
   history,
   windowSec,
   currentTime,
+  cursor,
+  onCursor,
 }: {
   watch: WatchSeries[];
-  history: { t: number; v: Record<string, number> }[];
+  history: Sample[];
   windowSec: number;
   currentTime: number;
+  cursor: Sample | null;
+  onCursor: (t: number | null) => void;
 }) {
   const W = 1000;
   const H = 440;
@@ -136,7 +239,6 @@ function Chart({
   const tStart = tEnd - windowSec;
   const vis = history.filter((s) => s.t >= tStart - 1);
 
-  // analog y-range
   let min = Infinity;
   let max = -Infinity;
   for (const s of vis) {
@@ -176,13 +278,27 @@ function Chart({
     return d;
   };
 
-  // y gridlines
   const ticks = 4;
   const gridY = Array.from({ length: ticks + 1 }, (_, i) => min + ((max - min) * i) / ticks);
 
+  const handleMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const xVB = ((e.clientX - rect.left) / rect.width) * W;
+    const t = tStart + ((xVB - padL) / (W - padL - padR)) * windowSec;
+    onCursor(Math.max(tStart, Math.min(tEnd, t)));
+  };
+
+  const cursorVisible = cursor && cursor.t >= tStart && cursor.t <= tEnd;
+  const cx = cursorVisible ? xOf(cursor!.t) : 0;
+
   return (
-    <svg className="scope-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
-      {/* analog grid */}
+    <svg
+      className="scope-svg"
+      viewBox={`0 0 ${W} ${H}`}
+      preserveAspectRatio="none"
+      onMouseMove={handleMove}
+      onMouseLeave={() => onCursor(null)}
+    >
       {gridY.map((g, i) => (
         <g key={i}>
           <line x1={padL} x2={W - padR} y1={yOf(g)} y2={yOf(g)} className="grid" />
@@ -191,7 +307,6 @@ function Chart({
           </text>
         </g>
       ))}
-      {/* time axis labels */}
       {Array.from({ length: 5 }, (_, i) => {
         const t = tStart + (windowSec * i) / 4;
         return (
@@ -200,11 +315,9 @@ function Chart({
           </text>
         );
       })}
-      {/* analog traces */}
       {analog.map((s) => (
         <path key={s.id} d={linePath(s)} fill="none" stroke={s.color} strokeWidth={1.5} />
       ))}
-      {/* binary lanes */}
       {binary.map((s, i) => {
         const top = analogBottom + 24 + i * (laneH + 4);
         const yHi = top + 2;
@@ -235,6 +348,17 @@ function Chart({
           </g>
         );
       })}
+      {/* hover cursor */}
+      {cursorVisible && (
+        <g>
+          <line x1={cx} x2={cx} y1={padT} y2={H - 16} className="scope-cursor" />
+          {analog.map((s) => {
+            const v = cursor!.v[s.id];
+            if (v === undefined) return null;
+            return <circle key={s.id} cx={cx} cy={yOf(v)} r={3} fill={s.color} />;
+          })}
+        </g>
+      )}
     </svg>
   );
 }
@@ -245,7 +369,7 @@ function fmt(v: number | undefined, kind: 'analog' | 'binary'): string {
   return Number.isInteger(v) ? v.toFixed(0) : v.toFixed(2);
 }
 
-function exportCsv(watch: WatchSeries[], history: { t: number; v: Record<string, number> }[]) {
+function exportCsv(watch: WatchSeries[], history: Sample[]) {
   const header = ['t', ...watch.map((w) => w.label)].join(',');
   const rows = history.map((s) => [s.t.toFixed(2), ...watch.map((w) => (s.v[w.id] ?? '').toString())].join(','));
   const csv = [header, ...rows].join('\n');
