@@ -24,7 +24,6 @@ function Flow() {
   const onConnect = useChartStore((s) => s.onConnect);
   const setSelected = useChartStore((s) => s.setSelected);
   const addBlock = useChartStore((s) => s.addBlock);
-  const warnings = useChartStore((s) => s.warnings);
   const theme = useChartStore((s) => s.theme);
   const beginInteraction = useChartStore((s) => s.beginInteraction);
 
@@ -119,13 +118,6 @@ function Flow() {
           maskColor="rgba(15,23,42,0.6)"
         />
       </ReactFlow>
-      {warnings.length > 0 && (
-        <div className="warnings">
-          {warnings.map((w, i) => (
-            <div key={i}>⚠ {w}</div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
