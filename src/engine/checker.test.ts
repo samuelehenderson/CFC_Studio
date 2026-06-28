@@ -106,6 +106,32 @@ describe('behavioral auto-checker', () => {
     }
   });
 
+  it('enthalpy-economizer lesson is solvable (ENTHALPY + CMP_R)', () => {
+    const lesson = findLesson('enthalpy-econ')!;
+    const nodes = [
+      n('oat', 'AI', 'OA-T', { value: 60 }),
+      n('oarh', 'AI', 'OA-RH', { value: 50 }),
+      n('rat', 'AI', 'RA-T', { value: 75 }),
+      n('rarh', 'AI', 'RA-RH', { value: 50 }),
+      n('en', 'BO', 'Econ Enable'),
+      n('oae', 'ENTHALPY', 'oae'),
+      n('rae', 'ENTHALPY', 'rae'),
+      n('cmp', 'CMP_R', 'cmp'),
+    ] as NodeInput[];
+    const edges = [
+      e('oat', 'y', 'oae', 't'),
+      e('oarh', 'y', 'oae', 'rh'),
+      e('rat', 'y', 'rae', 't'),
+      e('rarh', 'y', 'rae', 'rh'),
+      e('oae', 'h', 'cmp', 'in1'),
+      e('rae', 'h', 'cmp', 'in2'),
+      e('cmp', 'lt', 'en', 'x'),
+    ] as EdgeInput[];
+    for (const c of lesson.checks) {
+      expect(c.test(runChart(nodes, edges, c.run)), c.label).toBe(true);
+    }
+  });
+
   it('PPCL economizer exercise is solvable (CMP_R + SEL_R)', () => {
     const lesson = findLesson('ppcl-economizer')!;
     const nodes = [

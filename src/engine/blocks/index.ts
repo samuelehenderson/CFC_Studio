@@ -14,6 +14,7 @@ import { counterBlocks } from './counters';
 import { memoryBlocks } from './memory';
 import { controlBlocks } from './control';
 import { convertBlocks } from './convert';
+import { hvacBlocks } from './hvac';
 import { ioBlocks } from './io';
 import { sourceBlocks } from './sources';
 
@@ -29,6 +30,7 @@ export const allBlocks: BlockDefinition[] = [
   ...counterBlocks,
   ...memoryBlocks,
   ...controlBlocks,
+  ...hvacBlocks,
 ];
 
 /**
@@ -49,6 +51,7 @@ const CATEGORY_PROVENANCE: Record<BlockCategory, Provenance> = {
   Counters: 'confirmed',
   Memory: 'confirmed',
   Control: 'inferred',
+  HVAC: 'inferred', // psychrometric formulas; exact Siemens block names not public
 };
 
 const PROVENANCE_OVERRIDE: Record<string, Provenance> = {
@@ -85,6 +88,7 @@ export const categoryOrder: BlockCategory[] = [
   'Counters',
   'Memory',
   'Control',
+  'HVAC',
 ];
 
 /** Blocks grouped by category, in palette order. */

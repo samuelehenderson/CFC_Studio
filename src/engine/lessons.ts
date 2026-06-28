@@ -363,6 +363,64 @@ export const modules: Module[] = [
         ],
       },
       {
+        id: 'enthalpy-econ',
+        title: 'Enthalpy economizer',
+        blurb: 'Enable free cooling when outdoor air is cooler (in total energy) than return air.',
+        objective: 'Use psychrometric Enthalpy blocks with a comparator.',
+        instructions: [
+          'Enable the economizer when outdoor-air ENTHALPY is below return-air enthalpy.',
+          'Add two ENTHALPY blocks (HVAC category). Wire OA-T, OA-RH into one and RA-T, RA-RH into the other.',
+          'Add a CMP_R: OA enthalpy → IN1, RA enthalpy → IN2, then CMP_R.LT → Econ Enable.',
+          'Press “Check my work”.',
+        ],
+        hints: [
+          'Enthalpy captures both temperature AND humidity — the right basis for economizing.',
+          'Economize when OA enthalpy < RA enthalpy, so use the CMP_R.LT output.',
+          'ENTHALPY(OA).H → CMP_R.IN1; ENTHALPY(RA).H → CMP_R.IN2; CMP_R.LT → Econ Enable.',
+        ],
+        successText: 'Enthalpy economizing beats dry-bulb in humid climates — you compared total heat, not just temperature.',
+        starter: () => ({
+          nodes: [
+            node('oat', 'AI', 'OA-T', 60, 40, 10, { value: 60, units: '°F' }),
+            node('oarh', 'AI', 'OA-RH', 60, 150, 20, { value: 50, units: '%' }),
+            node('rat', 'AI', 'RA-T', 60, 270, 30, { value: 75, units: '°F' }),
+            node('rarh', 'AI', 'RA-RH', 60, 380, 40, { value: 50, units: '%' }),
+            node('en', 'BO', 'Econ Enable', 660, 200, 70),
+          ],
+          edges: [],
+        }),
+        checks: [
+          {
+            id: 'econ-cool-dry',
+            label: 'Enable when OA is cool & dry',
+            run: {
+              duration: 4,
+              stimulus: [
+                { t: 0, label: 'OA-T', value: 55 },
+                { t: 0, label: 'OA-RH', value: 35 },
+                { t: 0, label: 'RA-T', value: 75 },
+                { t: 0, label: 'RA-RH', value: 50 },
+              ],
+            },
+            test: (r) => r.valueAt('Econ Enable', 'y', 3) > 0.5,
+          },
+          {
+            id: 'econ-hot-humid',
+            label: 'Disable when OA is hot & humid',
+            run: {
+              duration: 4,
+              stimulus: [
+                { t: 0, label: 'OA-T', value: 90 },
+                { t: 0, label: 'OA-RH', value: 70 },
+                { t: 0, label: 'RA-T', value: 75 },
+                { t: 0, label: 'RA-RH', value: 50 },
+              ],
+            },
+            test: (r) => r.valueAt('Econ Enable', 'y', 3) < 0.5,
+          },
+        ],
+      },
+      {
         id: 'ahu-heating-loop',
         title: 'Capstone: heat the zone',
         blurb: 'Build a PID loop that holds the live AHU zone at 72°F.',

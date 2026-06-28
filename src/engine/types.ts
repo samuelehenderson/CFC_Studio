@@ -125,7 +125,8 @@ export type BlockCategory =
   | 'Control'
   | 'Memory'
   | 'Signal'
-  | 'Constants';
+  | 'Constants'
+  | 'HVAC';
 
 /** An instance of a block placed on the chart. */
 export interface BlockInstance {
