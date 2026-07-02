@@ -25,6 +25,7 @@ building controls"):
 | **Scope** | Oscilloscope / data recorder for pin values over time — **live now** |
 | **Translate** | PPCL → CFC bench — parses real PPCL (LOOP args, macros, scan model) — **live now** |
 | **Reference** | Auto-generated block datasheets with provenance badges — **live now** |
+| **Report** | Daily field report builder — fill in the Siemens Field Report template, attach photos, export Word (.docx) or PDF — **live now** |
 
 Try it: open the **Plant** tab → **Load AHU demo chart** → **Run simulation** (bump
 the Editor speed to 20×) and watch the heating PID settle the zone at setpoint,

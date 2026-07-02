@@ -6,6 +6,7 @@ import { ScopeView } from './components/ScopeView';
 import { PlantView } from './components/PlantView';
 import { LearnView } from './components/LearnView';
 import { TranslateView } from './components/TranslateView';
+import { ReportView } from './components/ReportView';
 import { useChartStore } from './store/chartStore';
 
 export function App() {
@@ -30,6 +31,7 @@ export function App() {
         {activeTab === 'plant' && <PlantView />}
         {activeTab === 'learn' && <LearnView />}
         {activeTab === 'translate' && <TranslateView />}
+        {activeTab === 'report' && <ReportView />}
       </main>
     </div>
   );

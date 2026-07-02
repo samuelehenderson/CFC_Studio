@@ -56,7 +56,7 @@ let historyTag: string | null = null; // coalesces rapid same-field edits
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 let clipboard: CfcNode[] = [];
 
-export type TabId = 'learn' | 'editor' | 'plant' | 'scope' | 'translate' | 'reference';
+export type TabId = 'learn' | 'editor' | 'plant' | 'scope' | 'translate' | 'reference' | 'report';
 export type Theme = 'dark' | 'light';
 
 const THEME_KEY = 'cfc.theme';
