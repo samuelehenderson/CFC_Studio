@@ -1287,3 +1287,227 @@ input {
   border-left: none;
   padding: var(--space-2) var(--space-4);
 }
+
+/* ---------- Report tab (daily field report builder) ---------- */
+.rpt-shell {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.rpt-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+.rpt-note {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+.rpt-panes {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(360px, 1fr) 1.1fr;
+}
+.rpt-form {
+  overflow-y: auto;
+  padding: var(--space-4);
+  border-right: 1px solid var(--border);
+}
+.rpt-section {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-3);
+}
+.rpt-section-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+.rpt-hint {
+  color: var(--text-dim);
+  font-size: 11.5px;
+  margin-bottom: var(--space-2);
+}
+.rpt-section label {
+  display: block;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  margin-bottom: var(--space-2);
+}
+.rpt-section input,
+.rpt-section textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 3px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 13px;
+}
+.rpt-section textarea {
+  resize: vertical;
+}
+.rpt-grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+.rpt-bullet-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.rpt-bullet-dot {
+  color: var(--text-dim);
+  padding-top: 8px;
+}
+.rpt-bullet-row textarea {
+  flex: 1;
+  margin-top: 0;
+}
+.rpt-icon-btn {
+  padding: 4px 8px;
+  font-size: 12px;
+  line-height: 1;
+}
+.rpt-add-btn {
+  font-size: 12px;
+  margin-top: 2px;
+}
+.rpt-photos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+.rpt-photo-card {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px;
+}
+.rpt-photo-card img {
+  width: 100%;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 4px;
+  display: block;
+}
+.rpt-photo-card input {
+  margin-top: 6px;
+  font-size: 12px;
+}
+.rpt-photo-tools {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+  justify-content: flex-end;
+}
+
+/* Paper preview — deliberately fixed light colors to mimic the printed page. */
+.rpt-preview-wrap {
+  overflow-y: auto;
+  padding: var(--space-4);
+  background: var(--bg-app);
+}
+.rpt-paper {
+  background: #ffffff;
+  color: #1a1a1a;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 48px 56px 64px;
+  border-radius: 4px;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
+  font-family: Calibri, 'Segoe UI', Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.rpt-p-banner {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+  font-size: 17px;
+  color: #00646e;
+  border-bottom: 2px solid #00646e;
+  padding-bottom: 8px;
+  margin-bottom: 16px;
+}
+.rpt-p-title {
+  font-weight: 700;
+  font-size: 19px;
+}
+.rpt-p-meta {
+  color: #666666;
+  font-size: 11px;
+  margin: 2px 0 14px;
+}
+.rpt-p-h {
+  font-weight: 700;
+  font-size: 15px;
+  color: #00646e;
+  margin: 18px 0 6px;
+}
+.rpt-paper p {
+  margin: 0 0 8px;
+}
+.rpt-paper ul {
+  margin: 0;
+  padding-left: 22px;
+}
+.rpt-paper li {
+  margin-bottom: 5px;
+}
+.rpt-p-photos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.rpt-p-photos figure {
+  margin: 0;
+  text-align: center;
+}
+.rpt-p-photos img {
+  max-width: 100%;
+  border-radius: 2px;
+}
+.rpt-p-photos figcaption {
+  font-style: italic;
+  color: #555555;
+  font-size: 11px;
+  margin-top: 4px;
+}
+.rpt-p-footer {
+  display: flex;
+  justify-content: space-between;
+  color: #666666;
+  font-size: 10.5px;
+  border-top: 1px solid #dddddd;
+  margin-top: 28px;
+  padding-top: 8px;
+}
+@media (max-width: 1100px) {
+  .rpt-panes {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+  .rpt-form {
+    border-right: none;
+    overflow-y: visible;
+  }
+  .rpt-preview-wrap {
+    overflow-y: visible;
+  }
+}

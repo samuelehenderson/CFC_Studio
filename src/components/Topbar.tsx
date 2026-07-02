@@ -7,6 +7,7 @@ const TABS: { id: TabId; label: string; hint: string }[] = [
   { id: 'scope', label: 'Scope', hint: 'Trends & data recorder' },
   { id: 'translate', label: 'Translate', hint: 'PPCL → CFC migration bench' },
   { id: 'reference', label: 'Reference', hint: 'Block datasheets & glossary' },
+  { id: 'report', label: 'Report', hint: 'Daily field report builder — export Word / PDF' },
 ];
 
 /** Global top bar: brand, primary tab navigation, theme toggle. */
